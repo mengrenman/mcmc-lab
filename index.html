@@ -93,6 +93,15 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <p>See why simulated annealing gets stuck in the wrong valley, how replica exchange escapes, and solve the traveling salesman problem.</p>
       <div class="tags"><span>local minima</span><span>parallel tempering</span><span>traveling salesman</span></div>
     </a>
+    <a class="card" href="lattice.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true" shape-rendering="crispEdges">
+        <g id="lattice-card"></g>
+      </svg>
+      <span class="num">Module 7 · §6.4</span>
+      <h2>Lattice gauge theory</h2>
+      <p>The algorithms of lattice QCD on a 2D toy: gauge fields on links, confinement, topological freezing, and quarks via pseudofermion HMC and conjugate gradient.</p>
+      <div class="tags"><span>Wilson loops</span><span>pseudofermions</span><span>conjugate gradient</span></div>
+    </a>
   </div>
 
   <section class="lesson">
@@ -116,11 +125,12 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           <li>Bayesian inference: where most people meet MCMC in practice.</li>
           <li>Ising model: a real physics problem where the choice of algorithm decides everything.</li>
           <li>Annealing and replica exchange: MCMC as an optimizer, and how to escape local minima.</li>
+          <li>Lattice gauge theory: the algorithms behind lattice QCD, on a toy you can run.</li>
         </ol>
       </div>
       <div class="note">
-        <h3>Not covered yet</h3>
-        <p>Book §6.4 (lattice QCD and other high-energy physics applications). The diagnostics and samplers here are its building blocks.</p>
+        <h3>Coverage</h3>
+        <p>Every chapter from 2 to 6. Book §6.4 runs on a two-dimensional U(1) toy model rather than full four-dimensional QCD, with the same algorithms.</p>
         <p><a href="tests.html">Sampler checks</a> runs statistical tests of every sampler against exact answers.</p>
       </div>
     </div>
@@ -141,6 +151,17 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       }
     }
     g.innerHTML = html;
+    // Plaquette field for the lattice card: a smooth blob of positive and negative flux.
+    var lc = document.getElementById('lattice-card'), out = '';
+    for (var r2 = 0; r2 < 11; r2++) {
+      for (var c2 = 0; c2 < 25; c2++) {
+        var v = Math.sin(c2 / 3.2) * Math.cos(r2 / 2.4) + 0.3 * Math.sin((c2 + r2) / 1.7);
+        var a = Math.min(1, Math.abs(v)), col = v < 0 ? '--div-neg' : '--div-pos';
+        out += '<rect x="' + c2 * 8 + '" y="' + r2 * 8 + '" width="8" height="8" fill="var(--div-mid)"/>';
+        out += '<rect x="' + c2 * 8 + '" y="' + r2 * 8 + '" width="8" height="8" fill="var(' + col + ')" fill-opacity="' + a.toFixed(2) + '"/>';
+      }
+    }
+    lc.innerHTML = out;
   })();
 </script>
 </body>

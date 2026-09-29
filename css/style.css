@@ -35,6 +35,11 @@
   --spin-down: #dde8f6;
   --cluster: #eb6834;
 
+  /* Diverging pair for signed quantities (plaquette flux): cool, neutral, warm. */
+  --div-neg: #2a78d6;
+  --div-mid: #f0efec;
+  --div-pos: #e34948;
+
   --accent: #2a78d6;
   --accent-ink: #1c5cab;
   --radius: 10px;
@@ -67,6 +72,9 @@
     --spin-up: #6da7ec;
     --spin-down: #202833;
     --cluster: #d95926;
+    --div-neg: #3987e5;
+    --div-mid: #383835;
+    --div-pos: #e66767;
     --accent: #3987e5;
     --accent-ink: #86b6ef;
   }
@@ -96,6 +104,9 @@
   --spin-up: #6da7ec;
   --spin-down: #202833;
   --cluster: #d95926;
+  --div-neg: #3987e5;
+  --div-mid: #383835;
+  --div-pos: #e66767;
   --accent: #3987e5;
   --accent-ink: #86b6ef;
 }

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lattice Gauge Theory · MCMC Lab</title>
+<meta name="description" content="The algorithms of lattice QCD, run on a two-dimensional toy model: gauge fields on links, confinement, topological freezing, and quarks via pseudofermion HMC with conjugate gradient.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
+<script type="module" src="js/pages/lattice.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <p class="eyebrow">Module 7 · Book §6.4</p>
+    <h1>Lattice gauge theory</h1>
+    <p class="lede">Lattice QCD computes the masses of protons and pions from first principles by sampling quark and gluon fields with MCMC on supercomputers. The real thing is four-dimensional, with 3 × 3 matrices on every link. This page runs the standard two-dimensional toy model that lattice-QCD algorithms are developed and tested on. It has the same ingredients (fields on links, confinement, topology, and quarks handled by pseudofermions, HMC and conjugate gradient) at a size a browser can handle.</p>
+  </section>
+
+  <section class="lesson" id="gl-lab">
+    <h2>Gauge fields live on links</h2>
+    <div class="idea">
+      <p>Quarks sit on the sites of the lattice, and the gluon field sits on the links between them (book §6.4.1). In this toy, each link carries a phase <var>U</var> = e<sup><var>i</var>θ</sup>, the gauge group U(1). Going around one square, a <em>plaquette</em>, collects the angle θ<sub><var>P</var></sub> = θ<sub>1</sub> + θ<sub>2</sub> − θ<sub>3</sub> − θ<sub>4</sub>, which is the lattice version of the field strength. The Wilson action is</p>
+      <span class="formula"><var>S</var> = β Σ<sub><var>P</var></sub> (1 − cos θ<sub><var>P</var></sub>)</span>
+      <p>and configurations are sampled with weight e<sup>−<var>S</var></sup>. Shifting every link by α(<var>x</var>) − α(<var>x</var> + μ̂), a gauge transformation, leaves every plaquette unchanged. Only gauge-invariant quantities like plaquettes and closed loops are physical. Large β means a fine lattice spacing, which is the continuum limit.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Pure gauge controls">
+        <div class="btn-row">
+          <button class="btn primary" id="gl-run" type="button">Run</button>
+          <button class="btn" id="gl-sweep" type="button">Sweep</button>
+          <button class="btn ghost" id="gl-reset" type="button">Reset</button>
+        </div>
+        <label class="field">
+          <span class="field-head"><span>Algorithm</span></span>
+          <select id="gl-alg">
+            <option value="metropolis">Metropolis, one link at a time</option>
+            <option value="hmc">HMC, all links at once</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Coupling β</span><output for="gl-beta"></output></span>
+          <input type="range" id="gl-beta" min="-1" max="1.3" step="0.01" value="0.3">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Lattice size</span></span>
+          <select id="gl-L">
+            <option value="8">8 × 8</option>
+            <option value="16" selected>16 × 16</option>
+            <option value="32">32 × 32</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Reset to</span></span>
+          <select id="gl-init">
+            <option value="hot">Random links (hot)</option>
+            <option value="cold">All links zero (cold)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="gl-speed"></output></span>
+          <input type="range" id="gl-speed" min="-0.3" max="3" step="0.01" value="1.5">
+        </label>
+        <p class="hint">Changing β or the algorithm keeps the configuration and restarts the averages. Every measurement is compared with the exact answer for this finite lattice, from the character expansion.</p>
+      </aside>
+      <div class="viz">
+        <p class="notice" id="gl-frozen" hidden></p>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Field strength θ<sub><var>P</var></sub> on every plaquette</span>
+              <span class="chart-sub" id="gl-field-sub"></span>
+            </figcaption>
+            <ul class="legend" id="gl-field-legend"></ul>
+            <div class="lattice-wrap"><canvas class="lattice" id="gl-field" role="img" aria-label="Plaquette angles"></canvas></div>
+          </figure>
+          <div class="tiles cols-2">
+            <div class="tile"><span class="tile-label">Sweeps</span><span class="tile-value" id="gl-t-sweeps">0</span><span class="tile-sub" id="gl-t-since"></span></div>
+            <div class="tile"><span class="tile-label">Acceptance</span><span class="tile-value" id="gl-t-acc">—</span><span class="tile-sub" id="gl-t-acc-sub"></span></div>
+            <div class="tile"><span class="tile-label">⟨cos θ<sub><var>P</var></sub>⟩</span><span class="tile-value" id="gl-t-plaq">—</span><span class="tile-sub" id="gl-t-plaq-exact"></span></div>
+            <div class="tile"><span class="tile-label">String tension σ</span><span class="tile-value" id="gl-t-sigma">—</span><span class="tile-sub">exact, −ln(I₁(β)/I₀(β))</span></div>
+            <div class="tile"><span class="tile-label">Topological charge <var>Q</var></span><span class="tile-value" id="gl-t-q">—</span><span class="tile-sub">always an integer</span></div>
+            <div class="tile"><span class="tile-label"><var>Q</var> changes per 1,000 sweeps</span><span class="tile-value" id="gl-t-qrate">—</span><span class="tile-sub">since the last change of β</span></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Confinement: the area law</span>
+              <span class="chart-sub">−ln⟨<var>W</var>⟩ for rectangular Wilson loops against the area they enclose. A straight line means the energy of a quark–antiquark pair grows with their distance.</span>
+            </figcaption>
+            <ul class="legend" id="gl-wilson-legend"></ul>
+            <div id="gl-wilson"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Topological charge <var>Q</var> per sweep</span>
+              <span class="chart-sub">Vertical lines mark changes of β or algorithm.</span>
+            </figcaption>
+            <div id="gl-q"></div>
+          </figure>
+        </div>
+        <figure class="chart">
+          <figcaption>
+            <span class="chart-title">Plaquette ⟨cos θ<sub><var>P</var></sub>⟩ per sweep</span>
+            <span class="chart-sub">Gray: exact for this lattice size.</span>
+          </figcaption>
+          <div id="gl-plaq"></div>
+        </figure>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>Run at β = 2 and compare ⟨cos θ<sub><var>P</var></sub>⟩ and the Wilson loops with their exact values. The points on the area-law chart fall on a straight line.</li>
+          <li>Raise β to 4, then 6, then 8. The field goes quiet, and <var>Q</var> changes less and less. In a test on 16 × 16, <var>Q</var> changed in 76% of sweeps at β = 2, 6% at β = 4, 0.2% at β = 6, and not once in 4,000 sweeps at β = 8.</li>
+          <li>Try HMC at β = 8. Its small, smooth moves cannot change <var>Q</var> either.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Topological freezing</h3>
+        <p>Changing <var>Q</var> means creating or destroying a whole unit of flux, which requires passing through configurations with a very unlikely plaquette. As the lattice gets finer, those configurations become exponentially rare, so any local algorithm stops moving between sectors. Real lattice QCD has the same problem near the continuum limit. It is critical slowing down again, like the Ising model at <var>T</var><sub>c</sub>, and an active research topic.</p>
+        <p>It also biases measurements. On a finite torus, charge <var>Q</var> spreads a flux of 2π<var>Q</var> over all the plaquettes, lowering each one slightly and adding a phase to every Wilson loop. At β = 6 on 16 × 16, ⟨cos θ<sub><var>P</var></sub>⟩ is about 0.9128 at <var>Q</var> = 0 but 0.9115 at <var>Q</var> = ±2. A chain frozen in one sector measures that sector's value, with an error bar that knows nothing about the missing ones.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="sm-lab">
+    <h2>Adding quarks: HMC with pseudofermions</h2>
+    <div class="idea">
+      <p>Quark fields are Grassmann numbers, which a computer cannot sample directly. They enter the action quadratically through the Dirac operator <var>D</var>, so they can be integrated out, leaving the weight det(<var>D</var> <var>D</var><sup>†</sup>) e<sup>−<var>S</var><sub>G</sub></sup> for two quark flavors (book eq. 6.62). That determinant is far too expensive to compute, so the book rewrites it with a <em>pseudofermion</em> <var>F</var>:</p>
+      <span class="formula">det(<var>D</var><var>D</var><sup>†</sup>) ∝ ∫ d<var>F</var> exp(−<var>F</var><sup>†</sup>(<var>D</var><var>D</var><sup>†</sup>)<sup>−1</sup><var>F</var>)</span>
+      <p>Each trajectory then follows the book's recipe. Draw Φ from e<sup>−Φ<sup>†</sup>Φ</sup> and set <var>F</var> = <var>D</var>Φ. Then move the links with HMC. Every force evaluation needs χ = (<var>D</var><var>D</var><sup>†</sup>)<sup>−1</sup><var>F</var>, which is found by the conjugate-gradient method (book Appendix E). This is the Schwinger model, with two flavors of Wilson quarks and the gauge field from above.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Schwinger model controls">
+        <div class="btn-row">
+          <button class="btn primary" id="sm-run" type="button">Run</button>
+          <button class="btn ghost" id="sm-reset" type="button">Reset</button>
+        </div>
+        <label class="field inline">
+          <input type="checkbox" id="sm-quarks" checked> <span>Dynamical quarks (two flavors)</span>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Coupling β</span><output for="sm-beta"></output></span>
+          <input type="range" id="sm-beta" min="-0.3" max="1" step="0.01" value="0.3">
+        </label>
+        <label class="field" id="sm-mass-field">
+          <span class="field-head"><span>Quark mass <var>m</var></span><output for="sm-mass"></output></span>
+          <input type="range" id="sm-mass" min="-1.7" max="0.3" step="0.01" value="-0.7">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Lattice size</span></span>
+          <select id="sm-L">
+            <option value="6">6 × 6</option>
+            <option value="8" selected>8 × 8</option>
+            <option value="12">12 × 12</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Leapfrog steps per trajectory</span><output for="sm-steps"></output></span>
+          <input type="range" id="sm-steps" min="4" max="40" step="1" value="10">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="sm-speed"></output></span>
+          <input type="range" id="sm-speed" min="0" max="1.5" step="0.01" value="0.8">
+        </label>
+        <p class="hint">Trajectories have length 1, so ε = 1/steps. Any change restarts the averages. Turning quarks off gives the quenched theory, simulated with the same HMC but no determinant.</p>
+      </aside>
+      <div class="viz">
+        <div class="tiles cols-3">
+          <div class="tile"><span class="tile-label">Trajectories</span><span class="tile-value" id="sm-t-traj">0</span><span class="tile-sub" id="sm-t-ms"></span></div>
+          <div class="tile"><span class="tile-label">Acceptance</span><span class="tile-value" id="sm-t-acc">—</span><span class="tile-sub" id="sm-t-dh"></span></div>
+          <div class="tile"><span class="tile-label">⟨cos θ<sub><var>P</var></sub>⟩</span><span class="tile-value" id="sm-t-plaq">—</span><span class="tile-sub" id="sm-t-quenched"></span></div>
+          <div class="tile"><span class="tile-label">CG iterations per solve</span><span class="tile-value" id="sm-t-cg">—</span><span class="tile-sub">grows as the quarks get lighter</span></div>
+          <div class="tile"><span class="tile-label">Share of time in CG</span><span class="tile-value" id="sm-t-cgshare">—</span><span class="tile-sub">solving (D D†) χ = F</span></div>
+          <div class="tile"><span class="tile-label">CG solves per trajectory</span><span class="tile-value" id="sm-t-solves">—</span><span class="tile-sub">one per force evaluation</span></div>
+        </div>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Plaquette per trajectory</span>
+              <span class="chart-sub">Gray: the exact quenched value (no quarks). Quarks shift it.</span>
+            </figcaption>
+            <ul class="legend" id="sm-plaq-legend"></ul>
+            <div id="sm-plaq"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Cost: CG iterations per solve</span>
+              <span class="chart-sub">Averaged over each trajectory.</span>
+            </figcaption>
+            <div id="sm-cg"></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>Run with quarks at β = 2, <var>m</var> = 0.2. The plaquette settles above the gray quenched value (about 0.716 against 0.698 on 8 × 8), because virtual quark pairs screen the gauge field. Turn quarks off and it drops back onto the gray line.</li>
+          <li>Watch the share of time in CG. It is typically above 95%, which is exactly the book's point: almost all of the work is solving (<var>D</var><var>D</var><sup>†</sup>)χ = <var>F</var>.</li>
+          <li>Lower the mass from 2 to 0.02. CG needs more iterations, about 30 at <var>m</var> = 2 and 75 at <var>m</var> = 0.2 on 8 × 8. Light quarks make <var>D</var> nearly singular, and in real QCD at physical quark masses this cost dominates everything.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Checking the quark algorithm</h3>
+        <p>On a 3 × 3 lattice the <a href="tests.html">sampler checks</a> run a completely different algorithm: Metropolis with the determinant computed exactly by LU decomposition. The two agree on the plaquette, and both differ from the quenched value by many error bars, so the check is sensitive to the quarks. The checks also confirm that the quark force matches finite differences of the action, that <var>D</var><sup>†</sup> = γ<sub>5</sub><var>D</var>γ<sub>5</sub>, and that ΔH shrinks like ε².</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <h2>From the toy to real lattice QCD</h2>
+    <div class="notes">
+      <div class="note">
+        <h3>What scales up</h3>
+        <ul>
+          <li><b>Dimensions:</b> 4 instead of 2, on lattices such as 64³ × 128 sites.</li>
+          <li><b>Links:</b> 3 × 3 complex SU(3) matrices (8 real parameters) instead of one angle.</li>
+          <li><b>Quarks:</b> 4 spin × 3 color components per site. The Dirac operator is a sparse matrix with hundreds of millions of rows.</li>
+          <li><b>Hardware:</b> months on supercomputers, with most of the time spent in the same CG solve you timed above.</li>
+        </ul>
+        <p>The result is worth it: the book's Fig. 6.25 shows hadron masses from lattice QCD agreeing with experiment.</p>
+      </div>
+      <div class="note">
+        <h3>Algorithms from §6.4 not run here</h3>
+        <ul>
+          <li><b>RHMC:</b> for fractional powers of the determinant, such as a single strange quark, using rational approximations and a multi-mass CG solver.</li>
+          <li><b>Multi-time-step leapfrog:</b> integrate the cheap gauge force with small steps and the expensive quark force with large ones.</li>
+          <li><b>The <var>n</var>-th root trick:</b> split the determinant over <var>n</var> pseudofermions to make its force smaller and smoother.</li>
+        </ul>
+        <p>The same toolkit simulates supersymmetric gauge theories, which through holography describe black holes in string theory. That is the research that led the authors to MCMC in the first place.</p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

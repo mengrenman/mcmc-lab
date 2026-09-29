@@ -13,6 +13,7 @@ export function palette() {
     s1: v('--s1'), s2: v('--s2'), s3: v('--s3'), exact: v('--exact'),
     good: v('--good'), bad: v('--bad'), seqHi: v('--seq-hi'),
     spinUp: v('--spin-up'), spinDown: v('--spin-down'), cluster: v('--cluster'),
+    divNeg: v('--div-neg'), divMid: v('--div-mid'), divPos: v('--div-pos'),
   };
   return paletteCache;
 }

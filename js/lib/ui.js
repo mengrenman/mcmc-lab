@@ -8,6 +8,7 @@ const PAGES = [
   ['bayes.html', 'Bayesian'],
   ['ising.html', 'Ising model'],
   ['optimization.html', 'Optimization'],
+  ['lattice.html', 'Lattice gauge'],
 ];
 
 const THEME_KEY = 'mcmc-lab-theme';

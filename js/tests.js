@@ -14,6 +14,8 @@ import { Ising, T_CRITICAL, onsagerMagnetization, onsagerEnergy } from './sample
 import { logGamma, coinLogPrior, coinLogLikelihood, coinPosterior, gaussianAction, gaussianPosteriorExact } from './lib/bayes.js';
 import { equilibrium, WalkerPopulation, geometricLadder, ReplicaExchange1D } from './samplers/annealing.js';
 import { TspProblem, randomCities, applyMove, undoMove, pickPair, bruteForce, TspReplicaExchange } from './samplers/tsp.js';
+import { U1Lattice, hmcTrajectory, logBesselI, u1Exact } from './samplers/gauge.js';
+import { WilsonDirac, solveCG, Pseudofermion, schwingerTrajectory, logAbsDet } from './samplers/schwinger.js';
 
 mountChrome();
 
@@ -532,6 +534,185 @@ test('Optimization', 'Replica exchange finds the brute-force optimum for 10 citi
     expected: fmtNum(exact, 6),
     observed: `swap: ${fmtNum(found.swap.L, 6)} after ${fmtInt(found.swap.steps)} steps; 2-opt: ${fmtNum(found['2opt'].L, 6)} after ${fmtInt(found['2opt'].steps)} steps`,
     detail: '40 replicas, β = 2.5 … 100 (the book uses 200 replicas, β = 0.5 … 100)',
+  };
+});
+
+// ---------------- Lattice gauge theory and the Schwinger model ----------------
+
+test('Lattice', 'log I_n(x) against an independent Python series', () => {
+  const ref = [[0, 1, 0.23591435850717854], [3, 2.5, -0.7457668093443528], [0, 30, 27.384701433171934], [7, 0.3, -21.802189194554995]];
+  const worst = Math.max(...ref.map(([n, x, v]) => Math.abs(logBesselI(n, x) - v)));
+  return exactCheck(worst, 0, 1e-10, 'n = 0, 3, 0, 7 at x = 1, 2.5, 30, 0.3');
+});
+
+test('Lattice', 'Exact torus formulas match an independent evaluation', () => {
+  const pairs = [[u1Exact(2, 64).wilson(4), 0.23706135958322969], [u1Exact(2, 64).plaquette, 0.697774658010838], [u1Exact(1, 9).plaquette, 0.44750571000659045], [u1Exact(2, 16).plaquette, 0.6992519268177053]];
+  const worst = Math.max(...pairs.map(([a, b]) => Math.abs(a - b)));
+  return exactCheck(worst, 0, 1e-10, 'plaquette and 2×2 loop; the 2×2 torus case was also checked by brute-force integration');
+});
+
+test('Lattice', 'Gauge invariance, and Q is an integer', () => {
+  const rng = new RNG(seedBase + 80);
+  const lat = new U1Lattice(6, rng);
+  lat.hot();
+  const before = [lat.meanCosPlaquette(), lat.wilsonLoop(2, 3), lat.topologicalCharge()];
+  const small = new U1Lattice(3, rng);
+  small.hot();
+  const d3 = new WilsonDirac(small, 0.4);
+  const det0 = logAbsDet(d3);
+  lat.randomGaugeTransform();
+  small.randomGaugeTransform();
+  const q = lat.topologicalCharge();
+  const worst = Math.max(
+    Math.abs(lat.meanCosPlaquette() - before[0]),
+    Math.abs(lat.wilsonLoop(2, 3) - before[1]),
+    Math.abs(q - before[2]),
+    Math.abs(logAbsDet(d3) - det0),
+    Math.abs(q - Math.round(q)),
+  );
+  return exactCheck(worst, 0, 1e-9, 'plaquette, 2×3 loop, Q and log|det D| before and after a random gauge transformation');
+});
+
+test('Lattice', 'Wilson-Dirac operator is γ5-hermitian: D† = γ5 D γ5', () => {
+  const rng = new RNG(seedBase + 81);
+  const lat = new U1Lattice(5, rng);
+  lat.hot();
+  const D = new WilsonDirac(lat, 0.3);
+  const n = D.n, u = new Float64Array(n), v = new Float64Array(n), Dv = new Float64Array(n), Du = new Float64Array(n);
+  for (let i = 0; i < n; i++) { u[i] = rng.normal(); v[i] = rng.normal(); }
+  D.apply(Dv, v);
+  D.applyDagger(Du, u);
+  // ⟨u, D v⟩ must equal ⟨D† u, v⟩ (complex inner products).
+  const inner = (a, b) => { let re = 0, im = 0; for (let i = 0; i < n; i += 2) { re += a[i] * b[i] + a[i + 1] * b[i + 1]; im += a[i] * b[i + 1] - a[i + 1] * b[i]; } return [re, im]; };
+  const [r1, i1] = inner(u, Dv), [r2, i2] = inner(Du, v);
+  return exactCheck(Math.hypot(r1 - r2, i1 - i2), 0, 1e-10, '5 × 5 lattice, random links and vectors');
+});
+
+test('Lattice', 'Conjugate gradient solves (D D†) χ = F', () => {
+  const rng = new RNG(seedBase + 82);
+  const lat = new U1Lattice(8, rng);
+  lat.hot();
+  const D = new WilsonDirac(lat, 0.2);
+  const b = Float64Array.from({ length: D.n }, () => rng.normal()), x = new Float64Array(D.n);
+  const iters = solveCG(D, x, b);
+  const t = new Float64Array(D.n), Mx = new Float64Array(D.n);
+  D.applyDagger(t, x);
+  D.apply(Mx, t);
+  let rr = 0, bb = 0;
+  for (let i = 0; i < D.n; i++) { rr += (Mx[i] - b[i]) ** 2; bb += b[i] ** 2; }
+  const res = exactCheck(Math.sqrt(rr / bb), 0, 1e-9, `${iters} iterations`);
+  return res;
+});
+
+test('Lattice', 'Gauge and pseudofermion forces match finite differences', () => {
+  const rng = new RNG(seedBase + 83);
+  const lat = new U1Lattice(4, rng);
+  lat.setBeta(1.5);
+  lat.hot();
+  const pf = new Pseudofermion(new WilsonDirac(lat, 0.3));
+  pf.refresh(rng);
+  const SF = () => { pf.chi.fill(0); solveCG(pf.dirac, pf.chi, pf.F, { tol: 1e-14 }); return pf.action(); };
+  SF();
+  const fG = lat.gaugeForce(new Float64Array(lat.theta.length));
+  const fF = pf.addForce(new Float64Array(lat.theta.length));
+  let worst = 0;
+  const h = 1e-5;
+  for (const i of [0, 1, 5, 12, 19, 30, 31]) {
+    const t0 = lat.theta[i];
+    lat.theta[i] = t0 + h; const gp = lat.action(), fp = SF();
+    lat.theta[i] = t0 - h; const gm = lat.action(), fm = SF();
+    lat.theta[i] = t0;
+    worst = Math.max(worst, Math.abs((gp - gm) / (2 * h) - fG[i]), Math.abs((fp - fm) / (2 * h) - fF[i]) / Math.max(1, Math.abs(fF[i])));
+  }
+  return exactCheck(worst, 0, 1e-6, '7 links on a 4 × 4 lattice, central differences with h = 10⁻⁵');
+});
+
+test('Lattice', 'Schwinger-model HMC: energy error shrinks like ε²', () => {
+  const run = (eps, seed) => {
+    const rng = new RNG(seed);
+    const lat = new U1Lattice(6, rng);
+    lat.setBeta(2);
+    lat.hot();
+    for (let k = 0; k < 20; k++) lat.sweepMetropolis();
+    rng.seed(seed + 1); // identical momenta and pseudofermions for both step sizes
+    const pf = new Pseudofermion(new WilsonDirac(lat, 0.5));
+    return schwingerTrajectory(lat, pf, { eps, steps: Math.round(1 / eps) }).dH;
+  };
+  let a = 0, b = 0;
+  for (let s = 0; s < 6; s++) { a += run(0.1, seedBase + 84 + 10 * s) ** 2; b += run(0.05, seedBase + 84 + 10 * s) ** 2; }
+  const ratio = Math.sqrt(a / b);
+  return { pass: ratio > 3 && ratio < 5.3, expected: '≈ 4', observed: fmtSig(ratio, 3), detail: 'RMS |ΔH| over 6 trajectories at ε = 0.1 divided by ε = 0.05' };
+});
+
+test('Lattice', 'Pure gauge Metropolis matches the exact plaquette and 2×2 loop (8 × 8, β = 2)', () => {
+  const lat = new U1Lattice(8, new RNG(seedBase + 85));
+  lat.setBeta(2);
+  lat.hot();
+  for (let i = 0; i < 500; i++) lat.sweepMetropolis();
+  const n = 20000, P = new Float64Array(n), W = new Float64Array(n);
+  for (let i = 0; i < n; i++) { lat.sweepMetropolis(); P[i] = lat.meanCosPlaquette(); W[i] = lat.wilsonLoop(2, 2); }
+  const ex = u1Exact(2, 64);
+  const a = chainMean(P), b = chainMean(W);
+  const ca = statCheck(a.mean, a.err, ex.plaquette), cb = statCheck(b.mean, b.err, ex.wilson(4));
+  return { pass: ca.pass && cb.pass, expected: `${fmtNum(ex.plaquette, 5)}, ${fmtNum(ex.wilson(4), 5)}`, observed: `${ca.observed}; ${cb.observed}`, detail: `${ca.detail}; ${cb.detail}` };
+});
+
+test('Lattice', 'Pure gauge HMC matches the exact plaquette (8 × 8, β = 2)', () => {
+  const lat = new U1Lattice(8, new RNG(seedBase + 86));
+  lat.setBeta(2);
+  lat.hot();
+  const opts = { eps: 0.1, steps: 10, forceFn: (f) => lat.gaugeForce(f), actionFn: () => lat.action() };
+  for (let i = 0; i < 300; i++) hmcTrajectory(lat, opts);
+  const n = 8000, P = new Float64Array(n);
+  for (let i = 0; i < n; i++) { hmcTrajectory(lat, opts); P[i] = lat.meanCosPlaquette(); }
+  const a = chainMean(P);
+  return statCheck(a.mean, a.err, u1Exact(2, 64).plaquette);
+});
+
+test('Lattice', 'Pseudofermion HMC reproduces exact-determinant Metropolis (3 × 3, β = 1, m = 0.1)', () => {
+  const beta = 1, mass = 0.1;
+  // (a) Metropolis on links with the weight |det D|² e^{−S_G}, determinant by dense LU.
+  const rngA = new RNG(seedBase + 87);
+  const A = new U1Lattice(3, rngA);
+  A.setBeta(beta);
+  A.hot();
+  const DA = new WilsonDirac(A, mass);
+  let logdet = logAbsDet(DA);
+  const sweepExact = () => {
+    for (let i = 0; i < A.theta.length; i++) {
+      const s = i >> 1, mu = i & 1;
+      const [p, q] = A.plaquettesOf(s, mu);
+      const before = Math.cos(A.plaquette(p)) + Math.cos(A.plaquette(q));
+      const old = A.theta[i];
+      A.theta[i] = old + A.step * (2 * rngA.uniform() - 1);
+      const after = Math.cos(A.plaquette(p)) + Math.cos(A.plaquette(q));
+      const ld = logAbsDet(DA);
+      const dS = -beta * (after - before) - 2 * (ld - logdet);
+      if (dS <= 0 || rngA.uniform() < Math.exp(-dS)) logdet = ld;
+      else A.theta[i] = old;
+    }
+  };
+  for (let i = 0; i < 300; i++) sweepExact();
+  const nA = 6000, PA = new Float64Array(nA);
+  for (let i = 0; i < nA; i++) { sweepExact(); PA[i] = A.meanCosPlaquette(); }
+  // (b) The book's pseudofermion HMC.
+  const rngB = new RNG(seedBase + 88);
+  const B = new U1Lattice(3, rngB);
+  B.setBeta(beta);
+  B.hot();
+  const pf = new Pseudofermion(new WilsonDirac(B, mass));
+  for (let i = 0; i < 300; i++) schwingerTrajectory(B, pf, { eps: 0.1, steps: 10 });
+  const nB = 6000, PB = new Float64Array(nB);
+  for (let i = 0; i < nB; i++) { schwingerTrajectory(B, pf, { eps: 0.1, steps: 10 }); PB[i] = B.meanCosPlaquette(); }
+  const a = chainMean(PA), b = chainMean(PB);
+  const z = Math.abs(a.mean - b.mean) / Math.hypot(a.err, b.err);
+  const quenched = u1Exact(beta, 9).plaquette;
+  const zq = Math.abs(b.mean - quenched) / b.err;
+  return {
+    pass: z < 4 && zq > 4,
+    expected: 'the two algorithms agree; both differ from the quenched value',
+    observed: `exact det ${fmtNum(a.mean, 4)} ± ${fmtSig(a.err, 2)}; pseudofermion ${fmtNum(b.mean, 4)} ± ${fmtSig(b.err, 2)}; quenched ${fmtNum(quenched, 4)}`,
+    detail: `${fmtNum(z, 1)} combined error bars apart; pseudofermion vs quenched ${fmtNum(zq, 1)} error bars`,
   };
 });
 

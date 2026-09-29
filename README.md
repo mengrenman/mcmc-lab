@@ -122,3 +122,8 @@ clusters, calibrated after each temperature change.
 Every chapter of the book from 2 to 6. Section 6.4 (lattice QCD) runs on the two-dimensional U(1)
 toy model, not full four-dimensional SU(3) QCD, using the same algorithms: HMC, pseudofermions
 and conjugate gradient.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The bundled KaTeX in `vendor/katex` is also MIT-licensed and keeps
+its own license file. The book itself is not part of this repository.

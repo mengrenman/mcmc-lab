@@ -3,7 +3,7 @@
 // error bar, sigma * sqrt(tau_int / N), and pass within 4 error bars (plus any stated allowance).
 
 import { mountChrome, $, setText } from './lib/ui.js';
-import { fmtNum, fmtSig } from './lib/plot.js';
+import { fmtNum, fmtSig, fmtInt } from './lib/plot.js';
 import { RNG, randomSeed } from './lib/random.js';
 import { mean, variance, autocorrelation, integratedTime, jackknifeMeanError, chainDiagnostics } from './lib/stats.js';
 import { targets1D, correlatedGaussian, banana, integrand, importanceWeightVariance, uniformWeightVariance, SQRT2PI } from './lib/targets.js';
@@ -12,6 +12,8 @@ import { HMC2D, leapfrog } from './samplers/hmc.js';
 import { Gibbs2D } from './samplers/gibbs.js';
 import { Ising, T_CRITICAL, onsagerMagnetization, onsagerEnergy } from './samplers/ising.js';
 import { logGamma, coinLogPrior, coinLogLikelihood, coinPosterior, gaussianAction, gaussianPosteriorExact } from './lib/bayes.js';
+import { equilibrium, WalkerPopulation, geometricLadder, ReplicaExchange1D } from './samplers/annealing.js';
+import { TspProblem, randomCities, applyMove, undoMove, pickPair, bruteForce, TspReplicaExchange } from './samplers/tsp.js';
 
 mountChrome();
 
@@ -449,6 +451,88 @@ test('Bayesian', 'Metropolis on the Gaussian (μ, σ) posterior, n = 30', () => 
   const a = chainMean(mu), b = chainMean(sg);
   const ca = statCheck(a.mean, a.err, ex.muMean), cb = statCheck(b.mean, b.err, ex.sigmaMean);
   return { pass: ca.pass && cb.pass, expected: `E[μ] = ${fmtNum(ex.muMean, 4)}, E[σ] = ${fmtNum(ex.sigmaMean, 4)}`, observed: `${ca.observed}; ${cb.observed}`, detail: `${ca.detail}; ${cb.detail}` };
+});
+
+// ---------------- Optimization: annealing, replica exchange, TSP ----------------
+
+test('Optimization', 'Plain Metropolis at T = 0.05 stays trapped in the wrong well', () => {
+  const pop = new WalkerPopulation(1, new RNG(seedBase + 70));
+  pop.reset(-1);
+  let right = 0;
+  const n = 200000;
+  for (let i = 0; i < n; i++) { pop.step(0.05, 0.1); if (pop.x[0] > 0) right++; }
+  const exact = equilibrium(0.05).probRight;
+  return { pass: right / n < 0.01 && exact > 0.65, expected: `trapped (exact equilibrium P(x > 0) = ${fmtNum(exact, 4)})`, observed: `P(x > 0) = ${fmtNum(right / n, 4)} over ${fmtInt(n)} steps`, detail: 'the barrier (≈ 1) is 20T high' };
+});
+
+test('Optimization', 'Slow annealing still leaves about half the walkers in the wrong well', () => {
+  const pop = new WalkerPopulation(400, new RNG(seedBase + 75));
+  pop.reset(0);
+  const L = 30000;
+  for (let s = 0; s < L; s++) pop.step(Math.pow(0.001, s / (L - 1)), 0.1);
+  const frac = pop.fractionRight();
+  return { pass: frac > 0.4 && frac < 0.62, expected: 'about 0.5 (the page says annealing barely helps here)', observed: `${fmtNum(frac, 3)} of 400 walkers in the global well`, detail: 'T from 1 to 0.001 over 30,000 steps, step size 0.1' };
+});
+
+test('Optimization', 'Replica exchange recovers P(x > 0) at the rung nearest T = 0.01', () => {
+  const temps = geometricLadder(2, 0.001, 32);
+  const rx = new ReplicaExchange1D(temps, new RNG(seedBase + 71));
+  rx.reset(-1);
+  const r = temps.reduce((best, t, m) => (Math.abs(Math.log(t / 0.01)) < Math.abs(Math.log(temps[best] / 0.01)) ? m : best), 0);
+  for (let i = 0; i < 20000; i++) rx.step();
+  const n = 300000, ind = new Float64Array(n);
+  for (let i = 0; i < n; i++) { rx.step(); ind[i] = rx.x[r] > 0 ? 1 : 0; }
+  const d = chainMean(ind);
+  const res = statCheck(d.mean, d.err, equilibrium(temps[r]).probRight);
+  res.detail += `; T = ${fmtSig(temps[r], 3)}, swap acceptance ${fmtNum(100 * rx.swapRate, 1)}%`;
+  return res;
+});
+
+test('Optimization', 'TSP move deltas equal full recomputation (swap and 2-opt)', () => {
+  const rng = new RNG(seedBase + 72);
+  const prob = randomCities(23, rng);
+  let worst = 0;
+  for (const move of ['swap', '2opt']) {
+    const tour = Int32Array.from({ length: 23 }, (_, i) => i);
+    for (let k = 0; k < 20000; k++) {
+      const [i, j] = pickPair(23, rng);
+      const before = prob.length(tour);
+      const delta = applyMove(prob, tour, move, i, j);
+      worst = Math.max(worst, Math.abs(prob.length(tour) - before - delta));
+      if (rng.uniform() < 0.5) undoMove(tour, move, i, j);
+    }
+  }
+  return exactCheck(worst, 0, 1e-12, '40,000 random moves, half kept');
+});
+
+test('Optimization', 'Brute force finds the polygon for cities on a circle', () => {
+  const N = 9, rng = new RNG(seedBase + 73);
+  const order = Array.from({ length: N }, (_, i) => i);
+  for (let i = N - 1; i > 0; i--) { const j = rng.int(i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+  const xs = order.map((k) => 0.5 + 0.4 * Math.cos((2 * Math.PI * k) / N));
+  const ys = order.map((k) => 0.5 + 0.4 * Math.sin((2 * Math.PI * k) / N));
+  const best = bruteForce(new TspProblem(xs, ys)).length;
+  return exactCheck(best, 2 * N * 0.4 * Math.sin(Math.PI / N), 1e-12, '9 shuffled points on a circle of radius 0.4');
+});
+
+test('Optimization', 'Replica exchange finds the brute-force optimum for 10 cities', () => {
+  const rng = new RNG(seedBase + 74);
+  const prob = randomCities(10, rng);
+  const exact = bruteForce(prob).length;
+  const found = {};
+  for (const move of ['swap', '2opt']) {
+    const rx = new TspReplicaExchange(prob, Array.from({ length: 40 }, (_, m) => (100 * (m + 1)) / 40), rng, move);
+    let steps = 0;
+    while (steps < 20000 && rx.bestLength > exact + 1e-9) { rx.step(); steps++; }
+    found[move] = { L: rx.bestLength, steps };
+  }
+  const pass = Object.values(found).every((f) => Math.abs(f.L - exact) < 1e-9);
+  return {
+    pass,
+    expected: fmtNum(exact, 6),
+    observed: `swap: ${fmtNum(found.swap.L, 6)} after ${fmtInt(found.swap.steps)} steps; 2-opt: ${fmtNum(found['2opt'].L, 6)} after ${fmtInt(found['2opt'].steps)} steps`,
+    detail: '40 replicas, β = 2.5 … 100 (the book uses 200 replicas, β = 0.5 … 100)',
+  };
 });
 
 // ---------------- Runner ----------------

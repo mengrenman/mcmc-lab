@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Annealing and Replica Exchange · MCMC Lab</title>
+<meta name="description" content="See why simulated annealing gets stuck in local minima, how replica exchange escapes them, and solve the traveling salesman problem with MCMC.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
+<script type="module" src="js/pages/optimization.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <p class="eyebrow">Module 6 · Book §6.3</p>
+    <h1>Annealing and replica exchange</h1>
+    <p class="lede">MCMC can also find minima. Treat the function to minimize as an energy, sample e<sup>−<var>f</var>/<var>T</var></sup>, and lower the temperature. This module shows where that simple idea gets stuck, how replica exchange gets it unstuck, and then puts both to work on the traveling salesman problem.</p>
+  </section>
+
+  <section class="lesson" id="sa-lab">
+    <h2>Stuck in the wrong valley</h2>
+    <div class="idea">
+      <p>The book's test function <var>f</var>(<var>x</var>) = (<var>x</var> − 1)²((<var>x</var> + 1)² + 0.01) has its global minimum at <var>x</var> = 1. It has a second valley near <var>x</var> = −1 that is only 0.04 higher, and a hill of height about 1 between them.</p>
+      <p><b>Simulated annealing</b> runs Metropolis on e<sup>−<var>f</var>(<var>x</var>)/<var>T</var></sup> while lowering <var>T</var>. At high <var>T</var> walkers hop over the hill freely. As <var>T</var> → 0, e<sup>−<var>f</var>/<var>T</var></sup> concentrates on the global minimum. The catch is that the hopping must stay possible while <var>T</var> is still small enough to tell the valleys apart.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Annealing controls">
+        <div class="btn-row">
+          <button class="btn primary" id="sa-run" type="button">Run</button>
+          <button class="btn ghost" id="sa-reset" type="button">Reset</button>
+        </div>
+        <label class="field">
+          <span class="field-head"><span>Schedule</span></span>
+          <select id="sa-mode">
+            <option value="anneal">Anneal: T falls from T₀ to 0.001</option>
+            <option value="fixed">Fixed temperature</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-head"><span id="sa-T-label">Starting temperature T₀</span><output for="sa-T"></output></span>
+          <input type="range" id="sa-T" min="-3" max="0.3" step="0.01" value="0">
+        </label>
+        <label class="field" id="sa-L-field">
+          <span class="field-head"><span>Annealing length (steps)</span><output for="sa-L"></output></span>
+          <input type="range" id="sa-L" min="3" max="5.5" step="0.01" value="4.3">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="sa-speed"></output></span>
+          <input type="range" id="sa-speed" min="1" max="4.5" step="0.01" value="3.3">
+        </label>
+        <p class="hint">400 walkers start at <var>x</var> = 0, on top of the hill. Each makes Metropolis moves with step size 0.1, as in the book. Changing a setting starts over.</p>
+      </aside>
+      <div class="viz">
+        <div class="tiles cols-4">
+          <div class="tile"><span class="tile-label">Step</span><span class="tile-value" id="sa-t-step">0</span><span class="tile-sub" id="sa-t-step-sub"></span></div>
+          <div class="tile"><span class="tile-label">Temperature</span><span class="tile-value" id="sa-t-T">—</span></div>
+          <div class="tile"><span class="tile-label">Walkers in the global valley</span><span class="tile-value" id="sa-t-right">—</span><span class="tile-sub">x &gt; 0</span></div>
+          <div class="tile"><span class="tile-label">Equilibrium at this T</span><span class="tile-value" id="sa-t-exact">—</span><span class="tile-sub">exact P(x &gt; 0)</span></div>
+        </div>
+        <figure class="chart">
+          <figcaption>
+            <span class="chart-title">The landscape and the walkers</span>
+            <span class="chart-sub">Each dot is one walker. Darker spots hold more of them.</span>
+          </figcaption>
+          <ul class="legend" id="sa-land-legend"></ul>
+          <div id="sa-land"></div>
+        </figure>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Fraction in the global valley</span>
+              <span class="chart-sub">Walkers versus the exact equilibrium at the current temperature.</span>
+            </figcaption>
+            <ul class="legend" id="sa-frac-legend"></ul>
+            <div id="sa-frac"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Temperature schedule</span>
+              <span class="chart-sub">Log scale.</span>
+            </figcaption>
+            <div id="sa-temp"></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>Run the default annealing. At first the walkers track the gray equilibrium curve. Then they fall behind: as the temperature drops they stop crossing the hill and freeze near a 50/50 split, while equilibrium climbs toward 100%.</li>
+          <li>Make the annealing 10 times longer. It barely helps. Even over 300,000 steps about half the walkers end in the wrong valley, no better than an instant quench.</li>
+          <li>Choose a fixed temperature of 0.3. The walkers do cross, but at that temperature the two valleys are almost equally likely (53% versus 47%), so there is nothing to find.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Why this landscape defeats annealing</h3>
+        <p>Crossing the hill takes about e<sup>1/<var>T</var></sup> attempts, so crossings stop once <var>T</var> falls to around 0.1–0.2. But the valleys differ by only 0.04, so e<sup>−<var>f</var>/<var>T</var></sup> favors the global one strongly only below <var>T</var> ≈ 0.02. There is no temperature where walkers can both cross and prefer the right side. Physicists meet the same situation at first-order phase transitions (book §6.3).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="rx-lab">
+    <h2>Replica exchange: let the temperatures trade</h2>
+    <div class="idea">
+      <p>Run <var>M</var> copies (replicas) at once, one per temperature <var>T</var><sub>1</sub> &gt; <var>T</var><sub>2</sub> &gt; … &gt; <var>T</var><sub><var>M</var></sub>, each with ordinary Metropolis. Every step, also offer to swap the configurations on neighboring rungs, accepting with probability min(1, e<sup>−Δ<var>S</var></sup>), where</p>
+      <span class="formula">Δ<var>S</var> = (1/<var>T</var><sub><var>m</var>+1</sub> − 1/<var>T</var><sub><var>m</var></sub>)(<var>f</var>(<var>X</var><sub><var>m</var></sub>) − <var>f</var>(<var>X</var><sub><var>m</var>+1</sub>))</span>
+      <p>The swaps leave every rung's distribution e<sup>−<var>f</var>/<var>T</var><sub><var>m</var></sub></sup> unchanged, but they let a configuration climb to a hot rung, cross the hill there, and come back down. Each rung then samples its temperature correctly, including the cold ones that plain Metropolis cannot handle.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Replica exchange controls">
+        <div class="btn-row">
+          <button class="btn primary" id="rx-run" type="button">Run</button>
+          <button class="btn ghost" id="rx-reset" type="button">Reset</button>
+        </div>
+        <label class="field inline">
+          <input type="checkbox" id="rx-swap" checked> <span>Allow swaps between rungs</span>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Replicas <var>M</var></span><output for="rx-M"></output></span>
+          <input type="range" id="rx-M" min="4" max="64" step="1" value="32">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Rung to measure</span><output for="rx-rung"></output></span>
+          <input type="range" id="rx-rung" min="0" max="31" step="1" value="22">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="rx-speed"></output></span>
+          <input type="range" id="rx-speed" min="1" max="4" step="0.01" value="2.7">
+        </label>
+        <p class="hint">Temperatures run geometrically from 2 down to 0.001. Every replica starts in the wrong valley at <var>x</var> = −1. Step sizes scale like √<var>T</var>, since cold replicas only need small moves. Changing a setting starts over.</p>
+      </aside>
+      <div class="viz">
+        <div class="tiles cols-3">
+          <div class="tile"><span class="tile-label">Steps</span><span class="tile-value" id="rx-t-steps">0</span><span class="tile-sub" id="rx-t-cost"></span></div>
+          <div class="tile"><span class="tile-label">Measured rung</span><span class="tile-value" id="rx-t-T">—</span><span class="tile-sub">temperature</span></div>
+          <div class="tile"><span class="tile-label">Swap acceptance</span><span class="tile-value" id="rx-t-swap">—</span><span class="tile-sub">averaged over neighboring pairs</span></div>
+          <div class="tile"><span class="tile-label">P(x &gt; 0) on this rung</span><span class="tile-value" id="rx-t-p">—</span><span class="tile-sub">after discarding the first 10%</span></div>
+          <div class="tile"><span class="tile-label">Exact P(x &gt; 0)</span><span class="tile-value" id="rx-t-exact">—</span><span class="tile-sub">from e<sup>−f/T</sup></span></div>
+          <div class="tile"><span class="tile-label">Tracked walker</span><span class="tile-value" id="rx-t-walker">—</span><span class="tile-sub">its current rung (0 is hottest)</span></div>
+        </div>
+        <figure class="chart">
+          <figcaption>
+            <span class="chart-title">The temperature ladder</span>
+            <span class="chart-sub">Each blue dot is one rung's configuration. The orange trail follows one walker as swaps carry it up and down the ladder.</span>
+          </figcaption>
+          <ul class="legend" id="rx-ladder-legend"></ul>
+          <div id="rx-ladder"></div>
+        </figure>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Distribution on the measured rung</span>
+              <span class="chart-sub">The exact curve is averaged over each bin, so the heights compare like for like.</span>
+            </figcaption>
+            <ul class="legend" id="rx-hist-legend"></ul>
+            <div id="rx-hist"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Running P(x &gt; 0) on the measured rung</span>
+              <span class="chart-sub">It should settle on the gray line.</span>
+            </figcaption>
+            <div id="rx-frac"></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>Run with swaps on. Watch the orange walker ride up to the hot rungs, cross <var>x</var> = 0 up there, and settle into <var>x</var> = +1 on the way down. The measured rung (<var>T</var> ≈ 0.009) converges to its exact 98.8%.</li>
+          <li>Reset and turn swaps off. Every rung is now plain Metropolis. The cold rungs never leave <var>x</var> = −1.</li>
+          <li>Use only 8 replicas. The temperature gaps get wider, fewer swaps are accepted, and walkers travel the ladder more slowly.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Why the swaps are allowed</h3>
+        <p>Treat all <var>M</var> replicas as one big system with weight Π<sub><var>m</var></sub> e<sup>−<var>f</var>(<var>X</var><sub><var>m</var></sub>)/<var>T</var><sub><var>m</var></sub></sup>. A swap is just another Metropolis proposal for that system, and Δ<var>S</var> is its change in action. So detailed balance holds, and each replica, looked at on its own, still follows its own temperature (book §6.3.3).</p>
+        <p>The price is <var>M</var> simulations instead of one, but they are independent between swaps, so they parallelize naturally.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="ts-lab">
+    <h2>The traveling salesman</h2>
+    <div class="idea">
+      <p>Visit <var>N</var> cities once each and return home, by the shortest route. There are (<var>N</var> − 1)!/2 distinct routes, which is already 181,440 for 10 cities and far too many to list for 30. Treat the route length <var>r</var><sub>total</sub> as the energy and run replica exchange over routes. Each replica proposes a small change to its route and accepts it with probability min(1, e<sup>−β Δ<var>r</var></sup>). Neighboring replicas then offer to swap routes as above.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Traveling salesman controls">
+        <div class="btn-row">
+          <button class="btn primary" id="ts-run" type="button">Run</button>
+          <button class="btn ghost" id="ts-reset" type="button">Reset</button>
+          <button class="btn" id="ts-new" type="button">New cities</button>
+        </div>
+        <label class="field">
+          <span class="field-head"><span>Cities <var>N</var></span><output for="ts-N"></output></span>
+          <input type="range" id="ts-N" min="4" max="150" step="1" value="10">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Move</span></span>
+          <select id="ts-move">
+            <option value="swap">Swap two cities (the book's move)</option>
+            <option value="2opt">Reverse a stretch of the route (2-opt)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Replicas <var>M</var></span><output for="ts-M"></output></span>
+          <input type="range" id="ts-M" min="4" max="100" step="1" value="40">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Coldest β = 1/<var>T</var></span><output for="ts-beta"></output></span>
+          <input type="range" id="ts-beta" min="1" max="3" step="0.01" value="2">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="ts-speed"></output></span>
+          <input type="range" id="ts-speed" min="0" max="5" step="0.01" value="2.7">
+        </label>
+        <p class="hint">β is spaced evenly from β<sub>max</sub>/<var>M</var> up to β<sub>max</sub>, as in the book (which uses 200 replicas and β<sub>max</sub> = 100). Every replica starts on the route 0 → 1 → 2 → … and back. For up to 10 cities, the true shortest route is found by checking every ordering.</p>
+      </aside>
+      <div class="viz">
+        <div class="tiles cols-3">
+          <div class="tile"><span class="tile-label">Distinct routes</span><span class="tile-value" id="ts-t-routes">—</span><span class="tile-sub">(N − 1)!/2</span></div>
+          <div class="tile"><span class="tile-label">Shortest found</span><span class="tile-value" id="ts-t-best">—</span><span class="tile-sub" id="ts-t-best-sub"></span></div>
+          <div class="tile"><span class="tile-label">True shortest (brute force)</span><span class="tile-value" id="ts-t-exact">—</span><span class="tile-sub" id="ts-t-exact-sub"></span></div>
+          <div class="tile"><span class="tile-label">Greedy descent</span><span class="tile-value" id="ts-t-greedy">—</span><span class="tile-sub">accept only improvements, same move</span></div>
+          <div class="tile"><span class="tile-label">Steps</span><span class="tile-value" id="ts-t-steps">0</span><span class="tile-sub" id="ts-t-moves"></span></div>
+          <div class="tile"><span class="tile-label">Acceptance</span><span class="tile-value" id="ts-t-acc">—</span><span class="tile-sub" id="ts-t-swap"></span></div>
+        </div>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Shortest route found so far</span>
+              <span class="chart-sub">The orange city is home (city 0).</span>
+            </figcaption>
+            <div id="ts-map"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Route length</span>
+              <span class="chart-sub">The coldest replica's route and the best found so far. The axis starts just above greedy descent, so the long starting route runs off the top.</span>
+            </figcaption>
+            <ul class="legend" id="ts-len-legend"></ul>
+            <div id="ts-len"></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>With 10 cities, run and compare with the brute-force optimum. Replica exchange usually finds it within about a hundred steps. Greedy descent stopped short of it for 16 of 20 random city sets in testing.</li>
+          <li>Move to 60 cities with the book's swap move, then reset with the 2-opt move. A 2-opt move can uncross two edges at once. After 20,000 steps its routes are about 20% shorter, and even greedy descent with 2-opt beats replica exchange with swaps. The choice of move matters as much as the algorithm.</li>
+          <li>Look at a long run's best route: it has no crossings. Any crossing can be removed by a 2-opt move that shortens the route, so a crossing always means the route is not optimal.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>What "solved" means here</h3>
+        <p>For more than about 10 cities nobody checks every route, so there is no certificate that the best route found is the shortest. Runs with different random seeds that agree give confidence, not proof. The book makes the same point about simulated annealing. For the book's 100-city example, replica exchange needed tens of millions of steps to settle.</p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

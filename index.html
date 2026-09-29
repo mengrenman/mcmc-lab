@@ -81,6 +81,18 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <p>Watch a magnet order itself below T<sub>c</sub>, compare single-spin and Wolff cluster updates, and measure critical slowing down.</p>
       <div class="tags"><span>phase transition</span><span>heat bath</span><span>Wolff clusters</span></div>
     </a>
+    <a class="card" href="optimization.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true">
+        <path d="M8 20 C22 70 40 86 60 60 S86 18 100 18 S126 60 150 84 S184 40 194 16" fill="none" stroke="var(--exact)" stroke-width="2"/>
+        <circle cx="52" cy="66" r="4" fill="var(--s1)"/><circle cx="58" cy="62" r="4" fill="var(--s1)"/>
+        <circle cx="146" cy="82" r="4" fill="var(--s1)"/><circle cx="152" cy="83" r="4" fill="var(--s1)"/><circle cx="140" cy="80" r="4" fill="var(--s1)"/>
+        <path d="M58 58 C70 10 110 4 138 76" fill="none" stroke="var(--s2)" stroke-width="1.6" stroke-dasharray="3 3"/>
+      </svg>
+      <span class="num">Module 6 · §6.3</span>
+      <h2>Annealing and replica exchange</h2>
+      <p>See why simulated annealing gets stuck in the wrong valley, how replica exchange escapes, and solve the traveling salesman problem.</p>
+      <div class="tags"><span>local minima</span><span>parallel tempering</span><span>traveling salesman</span></div>
+    </a>
   </div>
 
   <section class="lesson">
@@ -103,11 +115,12 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           <li>HMC and Gibbs: two ways past the random walk.</li>
           <li>Bayesian inference: where most people meet MCMC in practice.</li>
           <li>Ising model: a real physics problem where the choice of algorithm decides everything.</li>
+          <li>Annealing and replica exchange: MCMC as an optimizer, and how to escape local minima.</li>
         </ol>
       </div>
       <div class="note">
         <h3>Not covered yet</h3>
-        <p>Book §6.3 (simulated annealing and replica exchange for the traveling salesman problem) and §6.4 (lattice QCD). The diagnostics and samplers here are the building blocks for both.</p>
+        <p>Book §6.4 (lattice QCD and other high-energy physics applications). The diagnostics and samplers here are its building blocks.</p>
         <p><a href="tests.html">Sampler checks</a> runs statistical tests of every sampler against exact answers.</p>
       </div>
     </div>

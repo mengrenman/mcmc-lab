@@ -25,6 +25,7 @@ server that turns off caching, so edits to the JavaScript show up on reload. Pla
 | `hmc-gibbs.html` | ch. 5 | Animate HMC leapfrog trajectories and their energy. Race Metropolis, Gibbs and HMC on a correlated Gaussian or a banana, with ESS per iteration and per unit of work. |
 | `bayes.html` | §6.1 | Combine a prior with the likelihood of coin tosses and watch the posterior update. Sample it with Metropolis and check against the exact answer. Infer the mean and width of a Gaussian in 2D. |
 | `ising.html` | §6.2 | Run the 2D Ising model with Metropolis, heat-bath or Wolff updates. Scan temperatures to measure ⟨\|m\|⟩, ⟨e⟩ and critical slowing down against Onsager's exact results. |
+| `optimization.html` | §6.3 | Watch simulated annealing leave half its walkers in the wrong valley of the book's double well, then let replica exchange fix it. Solve the traveling salesman problem with replica exchange, against brute force and greedy descent. |
 | `tests.html` | — | Statistical and exact checks of every sampler (see below). |
 
 Chart conventions used throughout: a gray line is the exact answer, blue/orange/aqua are
@@ -40,7 +41,7 @@ js/lib/plot.js         small canvas plotting layer with hover tooltips
 js/lib/targets.js      target densities and their exact moments
 js/lib/bayes.js        coin priors and posteriors on a grid, Gaussian (μ, σ) posterior, log Γ
 js/lib/ui.js           header, theme toggle, sliders, animation loop
-js/samplers/           metropolis.js, hmc.js, gibbs.js, ising.js (no DOM code)
+js/samplers/           metropolis.js, hmc.js, gibbs.js, ising.js, annealing.js, tsp.js (no DOM code)
 js/pages/              one script per page
 js/tests.js            the checks behind tests.html
 ```
@@ -49,12 +50,12 @@ The samplers do not touch the DOM, so they can be reused or tested on their own.
 
 ## Checks
 
-`tests.html` runs 34 checks in the browser: RNG moments, FFT autocorrelation against a direct
+`tests.html` runs 40 checks in the browser: RNG moments, FFT autocorrelation against a direct
 sum, τ_int of an AR(1) process against its exact value, sampler moments against exact
 expectations (each within 4 of its own autocorrelation-aware error bars), leapfrog
 reversibility and ε² energy scaling, Ising energy bookkeeping, Onsager's exact results,
-agreement between the three Ising algorithms, and Bayesian posteriors against closed forms and
-brute-force integration. The first run uses fixed seeds, and the button
+agreement between the three Ising algorithms, Bayesian posteriors against closed forms and
+brute-force integration, and replica exchange against exact equilibrium and brute-force TSP optima. The first run uses fixed seeds, and the button
 reruns with fresh ones.
 
 One of those checks exists because of a bug it caught. An earlier Wolff "sweep" stopped as soon
@@ -64,5 +65,4 @@ clusters, calibrated after each temperature change.
 
 ## Not covered yet
 
-Book §6.3 (simulated annealing and replica exchange for the traveling salesman problem) and
-§6.4 (lattice QCD).
+Book §6.4 (lattice QCD and other high-energy physics applications).

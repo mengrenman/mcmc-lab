@@ -7,6 +7,7 @@ const PAGES = [
   ['hmc-gibbs.html', 'HMC & Gibbs'],
   ['bayes.html', 'Bayesian'],
   ['ising.html', 'Ising model'],
+  ['optimization.html', 'Optimization'],
 ];
 
 const THEME_KEY = 'mcmc-lab-theme';

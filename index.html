@@ -61,11 +61,22 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <p>Follow leapfrog trajectories and energy conservation, then race Metropolis, Gibbs and HMC on a strongly correlated target.</p>
       <div class="tags"><span>leapfrog</span><span>ΔH</span><span>conditionals</span><span>ESS per cost</span></div>
     </a>
+    <a class="card" href="bayes.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true">
+        <path d="M10 84 C40 84 50 30 70 30 S100 84 120 84" fill="none" stroke="var(--s2)" stroke-width="2"/>
+        <path d="M60 84 C90 84 100 60 130 60 S170 84 190 84" fill="none" stroke="var(--s3)" stroke-width="2"/>
+        <path d="M50 84 C80 84 88 8 100 8 S120 84 150 84" fill="var(--exact)" fill-opacity="0.12" stroke="var(--exact)" stroke-width="2.5"/>
+      </svg>
+      <span class="num">Module 4 · §6.1</span>
+      <h2>Bayesian inference</h2>
+      <p>Combine a prior with the likelihood of coin tosses, sample the posterior with Metropolis, and infer the mean and width of a Gaussian.</p>
+      <div class="tags"><span>prior × likelihood</span><span>credible intervals</span><span>Bayesian updating</span></div>
+    </a>
     <a class="card" href="ising.html">
       <svg viewBox="0 0 200 88" aria-hidden="true" shape-rendering="crispEdges">
         <g id="ising-card"></g>
       </svg>
-      <span class="num">Module 4 · §6.2</span>
+      <span class="num">Module 5 · §6.2</span>
       <h2>The Ising model</h2>
       <p>Watch a magnet order itself below T<sub>c</sub>, compare single-spin and Wolff cluster updates, and measure critical slowing down.</p>
       <div class="tags"><span>phase transition</span><span>heat bath</span><span>Wolff clusters</span></div>
@@ -90,12 +101,13 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           <li>Monte Carlo integration: why random sampling works and where it breaks down.</li>
           <li>Metropolis: the core algorithm, plus the diagnostics you will use everywhere.</li>
           <li>HMC and Gibbs: two ways past the random walk.</li>
+          <li>Bayesian inference: where most people meet MCMC in practice.</li>
           <li>Ising model: a real physics problem where the choice of algorithm decides everything.</li>
         </ol>
       </div>
       <div class="note">
         <h3>Not covered yet</h3>
-        <p>Book §6.1 (Bayesian inference), §6.3 (simulated annealing and replica exchange for the traveling salesman problem) and §6.4 (lattice QCD). The diagnostics and samplers here are the building blocks for all of them.</p>
+        <p>Book §6.3 (simulated annealing and replica exchange for the traveling salesman problem) and §6.4 (lattice QCD). The diagnostics and samplers here are the building blocks for both.</p>
         <p><a href="tests.html">Sampler checks</a> runs statistical tests of every sampler against exact answers.</p>
       </div>
     </div>

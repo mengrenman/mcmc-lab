@@ -5,6 +5,7 @@ const PAGES = [
   ['monte-carlo.html', 'Monte Carlo'],
   ['metropolis.html', 'Metropolis'],
   ['hmc-gibbs.html', 'HMC & Gibbs'],
+  ['bayes.html', 'Bayesian'],
   ['ising.html', 'Ising model'],
 ];
 

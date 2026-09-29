@@ -11,6 +11,7 @@ import { Metropolis1D, Metropolis2D } from './samplers/metropolis.js';
 import { HMC2D, leapfrog } from './samplers/hmc.js';
 import { Gibbs2D } from './samplers/gibbs.js';
 import { Ising, T_CRITICAL, onsagerMagnetization, onsagerEnergy } from './samplers/ising.js';
+import { logGamma, coinLogPrior, coinLogLikelihood, coinPosterior, gaussianAction, gaussianPosteriorExact } from './lib/bayes.js';
 
 mountChrome();
 
@@ -353,6 +354,101 @@ test('Monte Carlo', 'Uniform-weight variance formula on [−20, 20]', () => {
   const v = (sw2 - (sw * sw) / n) / (n - 1);
   const exact = uniformWeightVariance();
   return { pass: Math.abs(v / exact - 1) < 0.05, expected: fmtSig(exact, 4), observed: fmtSig(v, 4), detail: '5% tolerance' };
+});
+
+// ---------------- Bayesian inference ----------------
+
+test('Bayesian', 'log Γ: Γ(5) = 24, Γ(½) = √π, Γ(10.5)', () => {
+  const worst = Math.max(
+    Math.abs(logGamma(5) - Math.log(24)),
+    Math.abs(logGamma(0.5) - 0.5 * Math.log(Math.PI)),
+    Math.abs(logGamma(10.5) - Math.log(1133278.3889487855)),
+  );
+  return exactCheck(worst, 0, 1e-12, 'largest |difference| of log Γ');
+});
+
+test('Bayesian', 'Flat prior, 7 heads in 20: posterior is Beta(8, 14)', () => {
+  const q = coinPosterior({ kind: 'flat' }, 20, 7);
+  const a = 8, b = 14;
+  const mean = a / (a + b), sd = Math.sqrt((a * b) / ((a + b) ** 2 * (a + b + 1)));
+  const worst = Math.max(Math.abs(q.mean - mean), Math.abs(q.sd - sd));
+  return { pass: worst < 1e-6, expected: `mean ${fmtNum(mean, 5)}, sd ${fmtNum(sd, 5)}`, observed: `mean ${fmtNum(q.mean, 5)}, sd ${fmtNum(q.sd, 5)}`, detail: 'grid posterior against the closed form' };
+});
+
+test('Bayesian', 'Updating in two batches equals updating once', () => {
+  let worst = 0;
+  for (let i = 1; i < 200; i++) {
+    const p = i / 200;
+    const twoSteps = coinLogPrior({ kind: 'bump', p0: 0.5, M: 100 }, p) + coinLogLikelihood(10, 9, p) + coinLogLikelihood(30, 12, p);
+    const once = coinLogPrior({ kind: 'bump', p0: 0.5, M: 100 }, p) + coinLogLikelihood(40, 21, p);
+    worst = Math.max(worst, Math.abs(twoSteps - once));
+  }
+  return exactCheck(worst, 0, 1e-9, 'log posterior over 199 values of p');
+});
+
+test('Bayesian', 'Page claims: 9 of 10 under the trusting prior; book §6.1.5 example', () => {
+  const trusting = coinPosterior({ kind: 'bump', p0: 0.5, M: 100 }, 10, 9);
+  const book = coinPosterior({ kind: 'bump', p0: 0.9, M: 100 }, 1000, 515);
+  const pass = trusting.mode > 0.55 && trusting.mode < 0.59 && book.mode > 0.525 && book.mode < 0.54 && book.sd > 0.014 && book.sd < 0.017;
+  return {
+    pass,
+    expected: '9/10 trusting: mode ≈ 0.57; 515/1000: mode ≈ 0.53, sd ≈ 0.015',
+    observed: `mode ${fmtNum(trusting.mode, 3)}; mode ${fmtNum(book.mode, 3)}, sd ${fmtNum(book.sd, 4)}`,
+    detail: 'backs the numbers quoted on the Bayesian page',
+  };
+});
+
+test('Bayesian', 'Metropolis on the book §6.1.5 posterior matches the grid', () => {
+  const prior = { kind: 'bump', p0: 0.9, M: 100 };
+  const target = { logp: (p) => coinLogPrior(prior, p) + coinLogLikelihood(1000, 515, p) };
+  const exact = coinPosterior(prior, 1000, 515);
+  const m = new Metropolis1D(target, new RNG(seedBase + 60));
+  m.reset(0.9);
+  for (let i = 0; i < 2000; i++) m.step(0.05);
+  const n = 200000, xs = new Float64Array(n);
+  for (let i = 0; i < n; i++) { m.step(0.05); xs[i] = m.x; }
+  const r = chainMean(xs);
+  return statCheck(r.mean, r.err, exact.mean);
+});
+
+test('Bayesian', 'Gaussian (μ, σ) posterior: closed forms match 2D integration', () => {
+  const stats = { n: 12, mean: 0.7, s: 1.3 };
+  const S = gaussianAction(stats), ex = gaussianPosteriorExact(stats);
+  const Smin = S(stats.mean, stats.s);
+  let z = 0, m1 = 0, m2 = 0, s1 = 0, s2 = 0;
+  const G = 1200, muLo = -6, muHi = 7.4, sLo = 0.05, sHi = 12;
+  const dm = (muHi - muLo) / G, ds = (sHi - sLo) / G;
+  for (let i = 0; i < G; i++) {
+    const mu = muLo + (i + 0.5) * dm;
+    for (let j = 0; j < G; j++) {
+      const sg = sLo + (j + 0.5) * ds;
+      const w = Math.exp(Smin - S(mu, sg));
+      z += w; m1 += w * mu; m2 += w * mu * mu; s1 += w * sg; s2 += w * sg * sg;
+    }
+  }
+  const num = { muMean: m1 / z, muSd: Math.sqrt(m2 / z - (m1 / z) ** 2), sigmaMean: s1 / z, sigmaSd: Math.sqrt(s2 / z - (s1 / z) ** 2) };
+  const keys = ['muMean', 'muSd', 'sigmaMean', 'sigmaSd'];
+  const worst = Math.max(...keys.map((k) => Math.abs(num[k] - ex[k])));
+  return {
+    pass: worst < 2e-3,
+    expected: keys.map((k) => fmtNum(ex[k], 4)).join(', '),
+    observed: keys.map((k) => fmtNum(num[k], 4)).join(', '),
+    detail: `E[μ], sd μ, E[σ], sd σ for n = 12; worst |difference| ${worst.toExponential(1)}`,
+  };
+});
+
+test('Bayesian', 'Metropolis on the Gaussian (μ, σ) posterior, n = 30', () => {
+  const stats = { n: 30, mean: -0.4, s: 2.1 };
+  const ex = gaussianPosteriorExact(stats);
+  const m = new Metropolis2D({ U: gaussianAction(stats) }, new RNG(seedBase + 61));
+  m.reset(stats.mean, stats.s);
+  const c = 1.6 * stats.s / Math.sqrt(stats.n);
+  for (let i = 0; i < 2000; i++) m.step(c);
+  const n = 200000, mu = new Float64Array(n), sg = new Float64Array(n);
+  for (let i = 0; i < n; i++) { m.step(c); mu[i] = m.x; sg[i] = m.y; }
+  const a = chainMean(mu), b = chainMean(sg);
+  const ca = statCheck(a.mean, a.err, ex.muMean), cb = statCheck(b.mean, b.err, ex.sigmaMean);
+  return { pass: ca.pass && cb.pass, expected: `E[μ] = ${fmtNum(ex.muMean, 4)}, E[σ] = ${fmtNum(ex.sigmaMean, 4)}`, observed: `${ca.observed}; ${cb.observed}`, detail: `${ca.detail}; ${cb.detail}` };
 });
 
 // ---------------- Runner ----------------

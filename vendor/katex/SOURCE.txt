@@ -1,0 +1,2 @@
+KaTeX 0.18.9 (MIT), from https://registry.npmjs.org/katex/-/katex-0.18.9.tgz
+SHA-512 checked against the npm registry. Only the minified build, auto-render and WOFF2 fonts are kept.

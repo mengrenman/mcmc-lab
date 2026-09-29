@@ -485,6 +485,7 @@ code {
 
 /* ---------- Race columns ---------- */
 
+.race-grid { column-gap: 36px; }
 .race-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .race-col .chart { padding: 10px 10px 6px; }
 .race-stats { list-style: none; margin: 0; padding: 0; font-size: 0.84rem; color: var(--ink-2); }

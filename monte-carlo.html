@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monte Carlo Integration · MCMC Lab</title>
+<meta name="description" content="Estimate π with random darts, watch the error shrink like 1/√N, and see how importance sampling beats uniform sampling.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
+<script type="module" src="js/pages/monte-carlo.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <p class="eyebrow">Module 1 · Book chapter 2</p>
+    <h1>Monte Carlo integration</h1>
+    <p class="lede">Before any Markov chains: estimate an integral by averaging over random points. The error shrinks like 1/√<var>N</var> in any number of dimensions. <em>Where</em> you sample matters as much as how many samples you take.</p>
+  </section>
+
+  <section class="lesson" id="pi-lab">
+    <h2>Estimating π with random darts</h2>
+    <div class="idea">
+      <p>Throw <var>N</var> points uniformly into the unit square. The fraction that lands inside the quarter circle <var>x</var>² + <var>y</var>² &lt; 1 estimates its area, π/4, so</p>
+      <span class="formula">π ≈ 4 × (hits / <var>N</var>)</span>
+      <p>Each dart lands inside with probability π/4, so the standard error of this estimate is √(π(4 − π)/<var>N</var>) ≈ 1.64/√<var>N</var>. Quadrupling the number of darts halves the error.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Dart controls">
+        <div class="btn-row">
+          <button class="btn primary" id="pi-run" type="button">Run</button>
+          <button class="btn ghost" id="pi-reset" type="button">Reset</button>
+        </div>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="pi-speed"></output></span>
+          <input type="range" id="pi-speed" min="0" max="5" step="0.01" value="1.7">
+        </label>
+        <p class="hint">The board draws the first 20,000 darts. After that, the counts keep going but the picture stays fixed.</p>
+      </aside>
+      <div class="viz">
+        <div class="tiles cols-4">
+          <div class="tile"><span class="tile-label">Darts <var>N</var></span><span class="tile-value" id="pi-n">0</span></div>
+          <div class="tile"><span class="tile-label">Inside the circle</span><span class="tile-value" id="pi-hits">0</span></div>
+          <div class="tile"><span class="tile-label">Estimate of π</span><span class="tile-value" id="pi-est">—</span><span class="tile-sub">π = 3.14159…</span></div>
+          <div class="tile"><span class="tile-label">Actual error</span><span class="tile-value" id="pi-err">—</span><span class="tile-sub" id="pi-sigma">expected ≈ 1.64/√N</span></div>
+        </div>
+        <div class="grid-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">The dart board</span>
+              <span class="chart-sub">The gray arc is the quarter circle <var>x</var>² + <var>y</var>² = 1.</span>
+            </figcaption>
+            <ul class="legend" id="pi-board-legend"></ul>
+            <div id="pi-board"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Error versus number of darts</span>
+              <span class="chart-sub">Log–log axes. Slope −½ means the error falls like 1/√<var>N</var>.</span>
+            </figcaption>
+            <ul class="legend" id="pi-error-legend"></ul>
+            <div id="pi-error"></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>Run at a few darts per second and watch the estimate lurch around. With 20 darts, π ≈ 2.8 or 3.6 is completely normal.</li>
+          <li>Turn the speed all the way up. The blue curve scatters around the gray line but follows its slope.</li>
+          <li>Read the chart: each extra correct digit of π costs about 100 times more darts.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Why bother, when a grid would do?</h3>
+        <p>In one or two dimensions a grid is better. But a grid with <var>k</var> points per axis needs <var>k</var><sup><var>n</var></sup> points in <var>n</var> dimensions, which is the curse of dimensionality. The Monte Carlo error is σ/√<var>N</var> whatever <var>n</var> is.</p>
+        <p>The catch is σ, the spread of the quantity being averaged. When the integrand lives in a tiny corner of the domain, σ is huge. The next lab shows this.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="is-lab">
+    <h2>Importance sampling: sample where the integrand lives</h2>
+    <div class="idea">
+      <p>To estimate <var>I</var> = ∫ <var>f</var>(<var>x</var>) d<var>x</var>, draw <var>x</var> from any density <var>q</var> and average the weights <var>w</var> = <var>f</var>(<var>x</var>)/<var>q</var>(<var>x</var>). Their expectation is exactly <var>I</var>, and</p>
+      <span class="formula">Var(estimate) = Var<sub><var>q</var></sub>(<var>w</var>) / <var>N</var></span>
+      <p>so a <var>q</var> shaped like |<var>f</var>| makes the weights nearly constant and the error small. Here <var>f</var>(<var>x</var>) = <var>x</var>² e<sup>−<var>x</var>²/2</sup>, with exact integral √(2π) ≈ 2.5066. The uniform method spreads samples over the whole box [−20, 20]. The Gaussian proposal <var>q</var> = N(0, <var>s</var>²) keeps them in the region |<var>x</var>| ≲ 4 where <var>f</var> is not negligible. It is not a perfect match: <var>q</var> peaks at 0, where <var>f</var> vanishes. That mismatch is why the weights still vary.</p>
+    </div>
+
+    <div class="lab">
+      <aside class="controls" aria-label="Importance sampling controls">
+        <div class="btn-row">
+          <button class="btn primary" id="is-run" type="button">Run</button>
+          <button class="btn ghost" id="is-reset" type="button">Reset</button>
+        </div>
+        <label class="field">
+          <span class="field-head"><span>Proposal width <var>s</var></span><output for="is-width"></output></span>
+          <input type="range" id="is-width" min="-0.6" max="0.7" step="0.01" value="0.18">
+        </label>
+        <label class="field">
+          <span class="field-head"><span>Speed</span><output for="is-speed"></output></span>
+          <input type="range" id="is-speed" min="0" max="4.7" step="0.01" value="2">
+        </label>
+        <label class="field inline">
+          <input type="checkbox" id="is-zoom"> <span>Zoom in to |<var>x</var>| ≤ 5</span>
+        </label>
+        <p class="hint">Both methods take the same number of samples, each from its own random stream. Changing <var>s</var> starts both over.</p>
+      </aside>
+      <div class="viz">
+        <div class="tiles cols-4">
+          <div class="tile"><span class="tile-label">Samples <var>N</var> (each method)</span><span class="tile-value" id="is-n">0</span><span class="tile-sub">exact <var>I</var> = 2.5066</span></div>
+          <div class="tile"><span class="tile-label">Uniform estimate</span><span class="tile-value" id="is-u">—</span><span class="tile-sub" id="is-u-sd"></span></div>
+          <div class="tile"><span class="tile-label">Importance estimate</span><span class="tile-value" id="is-i">—</span><span class="tile-sub" id="is-i-sd"></span></div>
+          <div class="tile"><span class="tile-label">Samples saved</span><span class="tile-value" id="is-gain">—</span><span class="tile-sub" id="is-gain-sub">for the same error, in theory</span></div>
+        </div>
+        <figure class="chart">
+          <figcaption>
+            <span class="chart-title">Integrand and proposals</span>
+            <span class="chart-sub">Each proposal is scaled by <var>I</var>, so a perfect one would lie exactly on <var>f</var>. The ticks along the bottom show the latest 150 samples from each method.</span>
+          </figcaption>
+          <ul class="legend" id="is-funcs-legend"></ul>
+          <div id="is-funcs"></div>
+        </figure>
+        <figure class="chart">
+          <figcaption>
+            <span class="chart-title">Running estimate of <var>I</var></span>
+            <span class="chart-sub">Both runs are unbiased. What differs is how fast they settle.</span>
+          </figcaption>
+          <ul class="legend" id="is-running-legend"></ul>
+          <div id="is-running"></div>
+        </figure>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Try this</h3>
+        <ol>
+          <li>With <var>s</var> = 1.5, run to <var>N</var> = 1,000 and compare the error bars. The uniform one is about four times wider.</li>
+          <li>Set <var>s</var> = 4. The proposal is too wide, so it wastes samples, but the estimate stays well behaved.</li>
+          <li>Set <var>s</var> = 0.5 and run for a while. For long stretches the estimate looks fine, and its error bar looks small. Then a rare sample far out in the tails arrives with an enormous weight and the estimate jumps.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Too narrow is worse than too wide</h3>
+        <p>For this <var>f</var>, the variance of the weights is finite only when <var>s</var> &gt; 1/√2 ≈ 0.71. Below that, the proposal's tails fall off faster than <var>f</var>, so rare tail samples carry unbounded weight. The estimate is still unbiased, but its error bar is meaningless.</p>
+        <p>In high dimensions, finding a good <var>q</var> is as hard as the original problem. MCMC gets around this by drawing from <var>p</var> itself, without ever knowing its normalization.</p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

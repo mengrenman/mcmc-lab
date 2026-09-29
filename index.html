@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCMC Lab</title>
+<meta name="description" content="Learn Markov chain Monte Carlo interactively: Monte Carlo integration, Metropolis, HMC, Gibbs sampling and the Ising model, all written from scratch.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
+<script type="module">
+  import { mountChrome } from './js/lib/ui.js';
+  mountChrome();
+</script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <p class="eyebrow">An interactive companion to <em>MCMC from Scratch</em></p>
+    <h1>Learn Markov chain Monte Carlo by watching it work</h1>
+    <p class="lede">MCMC turns a hard integral into an average over random samples. Each module here puts one idea under your control: step the sampler, change a knob, and see what happens to the chain and its error bars. Every algorithm is written from scratch, with no libraries.</p>
+  </section>
+
+  <div class="cards">
+    <a class="card" href="monte-carlo.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true">
+        <rect x="56" y="4" width="80" height="80" fill="none" stroke="var(--axis)"/>
+        <path d="M56 4 A80 80 0 0 1 136 84" fill="none" stroke="var(--exact)" stroke-width="2"/>
+        <g fill="var(--s1)"><circle cx="66" cy="70" r="3"/><circle cx="84" cy="52" r="3"/><circle cx="100" cy="76" r="3"/><circle cx="72" cy="30" r="3"/><circle cx="110" cy="60" r="3"/><circle cx="92" cy="40" r="3"/><circle cx="62" cy="14" r="3"/></g>
+        <g fill="var(--s2)"><circle cx="126" cy="18" r="3"/><circle cx="130" cy="44" r="3"/><circle cx="114" cy="12" r="3"/></g>
+      </svg>
+      <span class="num">Module 1 · Chapter 2</span>
+      <h2>Monte Carlo integration</h2>
+      <p>Estimate π with random darts, watch the error shrink like 1/√N, and see how importance sampling beats uniform sampling.</p>
+      <div class="tags"><span>1/√N error</span><span>importance sampling</span><span>infinite variance</span></div>
+    </a>
+    <a class="card" href="metropolis.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true">
+        <path d="M10 80 C60 80 70 10 100 10 S140 80 190 80" fill="none" stroke="var(--exact)" stroke-width="2"/>
+        <rect x="74" y="4" width="36" height="80" fill="var(--s1)" opacity="0.1"/>
+        <line x1="92" y1="4" x2="92" y2="84" stroke="var(--s1)" stroke-width="2"/>
+        <circle cx="92" cy="12" r="4" fill="var(--s1)"/>
+        <circle cx="106" cy="13" r="6" fill="none" stroke="var(--good)" stroke-width="2"/>
+      </svg>
+      <span class="num">Module 2 · Chapters 3–4</span>
+      <h2>The Metropolis algorithm</h2>
+      <p>Step through accept/reject decisions, then learn to read a trace, pick a step size, and put an honest error bar on a correlated chain.</p>
+      <div class="tags"><span>step size</span><span>burn-in</span><span>autocorrelation</span><span>jackknife</span></div>
+    </a>
+    <a class="card" href="hmc-gibbs.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true">
+        <ellipse cx="100" cy="44" rx="84" ry="18" transform="rotate(-20 100 44)" fill="var(--seq-hi)" opacity="0.18"/>
+        <ellipse cx="100" cy="44" rx="48" ry="9" transform="rotate(-20 100 44)" fill="var(--seq-hi)" opacity="0.25"/>
+        <path d="M34 66 C60 50 90 50 120 34 S160 20 170 22" fill="none" stroke="var(--s2)" stroke-width="2"/>
+        <g fill="var(--s2)"><circle cx="34" cy="66" r="2.5"/><circle cx="62" cy="54" r="2.5"/><circle cx="92" cy="47" r="2.5"/><circle cx="120" cy="34" r="2.5"/><circle cx="148" cy="24" r="2.5"/></g>
+        <circle cx="170" cy="22" r="6" fill="none" stroke="var(--good)" stroke-width="2"/>
+      </svg>
+      <span class="num">Module 3 · Chapter 5</span>
+      <h2>HMC and Gibbs sampling</h2>
+      <p>Follow leapfrog trajectories and energy conservation, then race Metropolis, Gibbs and HMC on a strongly correlated target.</p>
+      <div class="tags"><span>leapfrog</span><span>ΔH</span><span>conditionals</span><span>ESS per cost</span></div>
+    </a>
+    <a class="card" href="ising.html">
+      <svg viewBox="0 0 200 88" aria-hidden="true" shape-rendering="crispEdges">
+        <g id="ising-card"></g>
+      </svg>
+      <span class="num">Module 4 · §6.2</span>
+      <h2>The Ising model</h2>
+      <p>Watch a magnet order itself below T<sub>c</sub>, compare single-spin and Wolff cluster updates, and measure critical slowing down.</p>
+      <div class="tags"><span>phase transition</span><span>heat bath</span><span>Wolff clusters</span></div>
+    </a>
+  </div>
+
+  <section class="lesson">
+    <h2>How to read the labs</h2>
+    <div class="notes">
+      <div class="note">
+        <h3>One color convention everywhere</h3>
+        <ul>
+          <li><span class="key line" style="--c: var(--exact); display:inline-block; vertical-align:middle"></span>&nbsp; <b>Gray line</b>: the exact answer, when one is known.</li>
+          <li><span class="key line" style="--c: var(--s1); display:inline-block; vertical-align:middle"></span>&nbsp; <b>Blue</b>, then <span class="key line" style="--c: var(--s2); display:inline-block; vertical-align:middle"></span> orange and <span class="key line" style="--c: var(--s3); display:inline-block; vertical-align:middle"></span> aqua: what your simulation produced.</li>
+          <li><span class="badge good">✓ Accepted</span> and <span class="badge bad">✗ Rejected</span> mark individual MCMC decisions.</li>
+        </ul>
+        <p style="margin-top:10px">Hover over any chart for exact values.</p>
+      </div>
+      <div class="note">
+        <h3>Suggested path</h3>
+        <ol>
+          <li>Monte Carlo integration: why random sampling works and where it breaks down.</li>
+          <li>Metropolis: the core algorithm, plus the diagnostics you will use everywhere.</li>
+          <li>HMC and Gibbs: two ways past the random walk.</li>
+          <li>Ising model: a real physics problem where the choice of algorithm decides everything.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Not covered yet</h3>
+        <p>Book §6.1 (Bayesian inference), §6.3 (simulated annealing and replica exchange for the traveling salesman problem) and §6.4 (lattice QCD). The diagnostics and samplers here are the building blocks for all of them.</p>
+        <p><a href="tests.html">Sampler checks</a> runs statistical tests of every sampler against exact answers.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  // Decorative spin grid for the Ising card (fixed pattern, so it looks the same on every visit).
+  (function () {
+    var g = document.getElementById('ising-card');
+    var cols = 25, rows = 11, size = 8, x0 = 0, seed = 7;
+    function rand() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    var html = '';
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var d = Math.hypot(c - 16, (r - 5) * 1.3);
+        var up = d < 5 ? rand() < 0.9 : rand() < 0.35;
+        html += '<rect x="' + (x0 + c * size) + '" y="' + r * size + '" width="' + size + '" height="' + size + '" fill="var(' + (up ? '--spin-up' : '--spin-down') + ')"/>';
+      }
+    }
+    g.innerHTML = html;
+  })();
+</script>
+</body>
+</html>

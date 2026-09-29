@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+
+# Reference material (the book PDF is copyrighted; keep it local)
+references/

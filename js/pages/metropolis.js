@@ -33,7 +33,7 @@ const speed = bindRange('mh-speed', { log: true, format: fmtSpeed });
 // ---------- Charts ----------
 
 const densityPlot = new Plot('mh-density', {
-  height: 210,
+  height: 190,
   x: { label: 'x' },
   draw(p) {
     const c = p.c;
@@ -56,8 +56,8 @@ const densityPlot = new Plot('mh-density', {
   },
 });
 legend('mh-density-legend', [
-  { label: 'target p(x)', color: 'var(--exact)', kind: 'line' },
-  { label: 'current x', color: 'var(--s1)', kind: 'dot' },
+  { label: 'target \\(p(x)\\)', color: 'var(--exact)', kind: 'line' },
+  { label: 'current \\(x\\)', color: 'var(--s1)', kind: 'dot' },
   { label: 'accepted proposal', color: 'var(--good)', kind: 'dot' },
   { label: 'rejected proposal', color: 'var(--bad)', kind: 'dot' },
 ]);
@@ -85,7 +85,7 @@ const tracePlot = new Plot('mh-trace', {
 });
 
 const histPlot = new Plot('mh-hist', {
-  height: 210,
+  height: 180,
   x: { label: 'x' },
   draw(p) {
     const c = p.c;
@@ -109,12 +109,12 @@ const histPlot = new Plot('mh-hist', {
 });
 legend('mh-hist-legend', [
   { label: 'kept samples', color: 'var(--s1)', kind: 'rect' },
-  { label: 'target p(x)', color: 'var(--exact)', kind: 'line' },
+  { label: 'target \\(p(x)\\)', color: 'var(--exact)', kind: 'line' },
 ]);
 
 let acfShown = 0;
 const acfPlot = new Plot('mh-acf', {
-  height: 210,
+  height: 180,
   x: { label: 'lag t' },
   y: { domain: [-0.2, 1] },
   draw(p) {
@@ -133,7 +133,7 @@ const acfPlot = new Plot('mh-acf', {
 });
 
 const jackPlot = new Plot('mh-jack', {
-  height: 200,
+  height: 180,
   x: { type: 'log', domain: [1, 1024], label: 'bin size w' },
   draw(p) {
     const c = p.c;
@@ -153,7 +153,7 @@ const jackPlot = new Plot('mh-jack', {
 });
 legend('mh-jack-legend', [
   { label: 'jackknife error', color: 'var(--s1)', kind: 'line' },
-  { label: 'σ √(τint / N) from the autocorrelation', color: 'var(--s2)', kind: 'line' },
+  { label: '\\(\\sigma\\sqrt{\\tau_{\\text{int}}/N}\\) from the autocorrelation', color: 'var(--s2)', kind: 'line' },
 ]);
 
 // ---------- State updates ----------

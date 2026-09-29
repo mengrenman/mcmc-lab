@@ -620,7 +620,26 @@ export function nearestIndex(xs, x, n = xs.length) {
   return Math.abs(xs[lo] - x) <= Math.abs(xs[hi] - x) ? lo : hi;
 }
 
-/** Fill a <ul class="legend"> with keys. items: [{label, color, kind: 'line'|'rect'|'dot'}]. */
+/**
+ * Set text that may contain inline math written \( … \). Math parts are typeset with KaTeX
+ * when it is loaded; everything else is inserted as plain text (never as HTML).
+ */
+export function setRichText(el, str) {
+  el.replaceChildren();
+  const parts = String(str).split(/\\\((.*?)\\\)/);
+  parts.forEach((part, i) => {
+    if (!part) return;
+    if (i % 2 === 1 && window.katex) {
+      const span = document.createElement('span');
+      window.katex.render(part, span, { throwOnError: false });
+      el.append(span);
+    } else {
+      el.append(document.createTextNode(part)); // plain text, or raw math if KaTeX is missing
+    }
+  });
+}
+
+/** Fill a <ul class="legend"> with keys. items: [{label, color, kind: 'line'|'rect'|'dot'}]. Labels may contain \( math \). */
 export function legend(el, items) {
   const ul = typeof el === 'string' ? document.getElementById(el) : el;
   ul.replaceChildren();
@@ -630,7 +649,7 @@ export function legend(el, items) {
     k.className = `key ${it.kind || 'line'}`;
     k.style.setProperty('--c', it.color);
     const t = document.createElement('span');
-    t.textContent = it.label;
+    setRichText(t, it.label);
     li.append(k, t);
     ul.append(li);
   }

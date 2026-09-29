@@ -7,6 +7,9 @@
 <meta name="description" content="Simulate the 2D Ising model with Metropolis, heat-bath and Wolff cluster updates, and watch critical slowing down near the phase transition.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 <script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
 <script type="module" src="js/pages/ising.js"></script>
@@ -22,10 +25,10 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="lesson" id="ig-lab">
     <h2>A lattice of spins</h2>
     <div class="idea">
-      <p>Each site carries a spin <var>s<sub>i</sub></var> = ±1, and neighboring spins prefer to align:</p>
-      <span class="formula"><var>E</var> = − Σ<sub>⟨<var>ij</var>⟩</sub> <var>s<sub>i</sub></var> <var>s<sub>j</sub></var>, &nbsp;&nbsp; <var>P</var>(configuration) ∝ e<sup>−<var>E</var>/<var>T</var></sup></span>
-      <p>The sum runs over nearest-neighbor pairs on a periodic <var>L</var> × <var>L</var> grid. Below the critical temperature <var>T</var><sub>c</sub> = 2/ln(1 + √2) ≈ 2.269, most spins agree and the lattice is magnetized. Above it, they are disordered.</p>
-      <p><b>Metropolis</b> proposes flipping one spin and accepts with probability min(1, e<sup>−Δ<var>E</var>/<var>T</var></sup>). <b>Heat bath</b> redraws each spin from its exact distribution given its four neighbors. <b>Wolff</b> grows a cluster of aligned spins, adding each aligned neighbor with probability 1 − e<sup>−2/<var>T</var></sup>, then flips the whole cluster at once. That move is always accepted.</p>
+      <p>Each site carries a spin \(s_i = \pm 1\), and neighboring spins prefer to align:</p>
+      <span class="formula">\[E = -\sum_{\langle ij \rangle} s_i s_j, \qquad P(\text{configuration}) \propto e^{-E/T}\]</span>
+      <p>The sum runs over nearest-neighbor pairs on a periodic \(L \times L\) grid. Below the critical temperature \(T_c = 2/\ln(1+\sqrt{2}) \approx 2.269\), most spins agree and the lattice is magnetized. Above it, they are disordered.</p>
+      <p><b>Metropolis</b> proposes flipping one spin and accepts with probability \(\min(1, e^{-\Delta E/T})\). <b>Heat bath</b> redraws each spin from its exact distribution given its four neighbors. <b>Wolff</b> grows a cluster of aligned spins, adding each aligned neighbor with probability \(1 - e^{-2/T}\), then flips the whole cluster at once. That move is always accepted.</p>
     </div>
 
     <div class="lab">
@@ -45,7 +48,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
         </label>
         <button class="btn" id="ig-cluster" type="button" disabled>Flip one cluster</button>
         <label class="field">
-          <span class="field-head"><span>Temperature <var>T</var></span><output for="ig-T"></output></span>
+          <span class="field-head"><span>Temperature \(T\)</span><output for="ig-T"></output></span>
           <input type="range" id="ig-T" min="1" max="4" step="0.01" value="2.27">
         </label>
         <label class="field">
@@ -67,11 +70,19 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           <span class="field-head"><span>Speed</span><output for="ig-speed"></output></span>
           <input type="range" id="ig-speed" min="-0.5" max="2.5" step="0.01" value="1">
         </label>
-        <p class="hint">A Wolff "sweep" is a fixed number of cluster flips, chosen so that about <var>N</var> = <var>L</var>² spins flip on average. That way every algorithm does about the same work per sweep. Changing <var>T</var> or the algorithm keeps the lattice and restarts the averages.</p>
+        <p class="hint">A Wolff "sweep" is a fixed number of cluster flips, chosen so that about \(N = L^2\) spins flip on average. That way every algorithm does about the same work per sweep. Changing \(T\) or the algorithm keeps the lattice and restarts the averages.</p>
         <p class="notice" id="ig-full" hidden>The history is full (100,000 sweeps). Press Reset to start over.</p>
       </aside>
       <div class="viz">
-        <div class="grid-2">
+        <div class="tiles cols-3">
+          <div class="tile"><span class="tile-label">Sweeps</span><span class="tile-value" id="ig-t-sweeps">0</span><span class="tile-sub" id="ig-t-since"></span></div>
+          <div class="tile"><span class="tile-label">\(T/T_c\)</span><span class="tile-value" id="ig-t-ratio">—</span><span class="tile-sub" id="ig-t-phase"></span></div>
+          <div class="tile"><span class="tile-label">\(\langle |m| \rangle\) magnetization</span><span class="tile-value" id="ig-t-m">—</span><span class="tile-sub" id="ig-t-m-exact"></span></div>
+          <div class="tile"><span class="tile-label">\(\langle e \rangle\) energy per spin</span><span class="tile-value" id="ig-t-e">—</span><span class="tile-sub" id="ig-t-e-exact"></span></div>
+          <div class="tile"><span class="tile-label" id="ig-t-work-label">Acceptance rate</span><span class="tile-value" id="ig-t-work">—</span><span class="tile-sub" id="ig-t-work-sub"></span></div>
+          <div class="tile"><span class="tile-label">\(|m|\) right now</span><span class="tile-value" id="ig-t-mnow">—</span><span class="tile-sub">fraction aligned: \((1 + |m|)/2\)</span></div>
+        </div>
+        <div class="row-3">
           <figure class="chart">
             <figcaption>
               <span class="chart-title">Spins</span>
@@ -80,27 +91,17 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
             <ul class="legend" id="ig-lattice-legend"></ul>
             <div class="lattice-wrap"><canvas class="lattice" id="ig-lattice" role="img" aria-label="Ising lattice"></canvas></div>
           </figure>
-          <div class="tiles cols-2">
-            <div class="tile"><span class="tile-label">Sweeps</span><span class="tile-value" id="ig-t-sweeps">0</span><span class="tile-sub" id="ig-t-since"></span></div>
-            <div class="tile"><span class="tile-label"><var>T</var> / <var>T</var><sub>c</sub></span><span class="tile-value" id="ig-t-ratio">—</span><span class="tile-sub" id="ig-t-phase"></span></div>
-            <div class="tile"><span class="tile-label">⟨|<var>m</var>|⟩ magnetization</span><span class="tile-value" id="ig-t-m">—</span><span class="tile-sub" id="ig-t-m-exact"></span></div>
-            <div class="tile"><span class="tile-label">⟨<var>e</var>⟩ energy per spin</span><span class="tile-value" id="ig-t-e">—</span><span class="tile-sub" id="ig-t-e-exact"></span></div>
-            <div class="tile"><span class="tile-label" id="ig-t-work-label">Acceptance rate</span><span class="tile-value" id="ig-t-work">—</span><span class="tile-sub" id="ig-t-work-sub"></span></div>
-            <div class="tile"><span class="tile-label">|<var>m</var>| right now</span><span class="tile-value" id="ig-t-mnow">—</span><span class="tile-sub">fraction aligned: (1 + |<var>m</var>|)/2</span></div>
-          </div>
-        </div>
-        <div class="grid-2">
           <figure class="chart">
             <figcaption>
-              <span class="chart-title">Magnetization |<var>m</var>| per sweep</span>
-              <span class="chart-sub">Vertical lines mark changes of <var>T</var> or algorithm.</span>
+              <span class="chart-title">Magnetization \(|m|\) per sweep</span>
+              <span class="chart-sub">Vertical lines mark changes of \(T\) or algorithm.</span>
             </figcaption>
             <ul class="legend" id="ig-m-legend"></ul>
             <div id="ig-m"></div>
           </figure>
           <figure class="chart">
             <figcaption>
-              <span class="chart-title">Energy per spin <var>e</var></span>
+              <span class="chart-title">Energy per spin \(e\)</span>
               <span class="chart-sub">Averages use sweeps since the last change, minus the first 20%.</span>
             </figcaption>
             <ul class="legend" id="ig-e-legend"></ul>
@@ -114,16 +115,16 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <div class="note">
         <h3>Try this</h3>
         <ol>
-          <li>Start from random spins at <var>T</var> = 1.5 with Metropolis. Domains form and coarsen, but stripes spanning the lattice can survive for a very long time.</li>
-          <li>Set <var>T</var> = 3.5. The lattice melts into noise and |<var>m</var>| falls to about zero.</li>
-          <li>At <var>T</var> = 2.27 compare the |<var>m</var>| trace under Metropolis and under Wolff. Metropolis drifts slowly, and Wolff decorrelates almost every sweep.</li>
-          <li>Pick Wolff and press <b>Flip one cluster</b> repeatedly. The orange sites are the cluster just flipped. Clusters are tiny at high <var>T</var> and cover most of the lattice at low <var>T</var>.</li>
+          <li>Start from random spins at \(T = 1.5\) with Metropolis. Domains form and coarsen, but stripes spanning the lattice can survive for a very long time.</li>
+          <li>Set \(T = 3.5\). The lattice melts into noise and \(|m|\) falls to about zero.</li>
+          <li>At \(T = 2.27\) compare the \(|m|\) trace under Metropolis and under Wolff. Metropolis drifts slowly, and Wolff decorrelates almost every sweep.</li>
+          <li>Pick Wolff and press <b>Flip one cluster</b> repeatedly. The orange sites are the cluster just flipped. Clusters are tiny at high \(T\) and cover most of the lattice at low \(T\).</li>
         </ol>
       </div>
       <div class="note">
         <h3>Why Wolff needs no accept/reject step</h3>
-        <p>The bond probability 1 − e<sup>−2/<var>T</var></sup> is tuned so that the energy cost of flipping the cluster is exactly canceled by the probability of building that same cluster forward versus backward. Detailed balance then holds with an acceptance probability of 1. The details are in book §6.2.5.</p>
-        <p>The exact values quoted in the tiles are for an infinite lattice (Onsager's solution). A finite lattice is slightly off, most visibly near <var>T</var><sub>c</sub>.</p>
+        <p>The bond probability \(1 - e^{-2/T}\) is tuned so that the energy cost of flipping the cluster is exactly canceled by the probability of building that same cluster forward versus backward. Detailed balance then holds with an acceptance probability of 1. The details are in book §6.2.5.</p>
+        <p>The exact values quoted in the tiles are for an infinite lattice (Onsager's solution). A finite lattice is slightly off, most visibly near \(T_c\).</p>
       </div>
     </div>
   </section>
@@ -131,7 +132,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="lesson" id="sc-lab">
     <h2>Critical slowing down</h2>
     <div class="idea">
-      <p>Near <var>T</var><sub>c</sub>, aligned regions of every size appear. A single-spin algorithm has to wear them down one spin at a time, so its autocorrelation time grows steeply. For Metropolis at <var>T</var><sub>c</sub> it grows roughly like <var>L</var><sup>2.2</sup>. Wolff flips whole regions at once and barely slows down. This scan sweeps through temperatures and measures ⟨|<var>m</var>|⟩, ⟨<var>e</var>⟩ and τ<sub>int</sub> of |<var>m</var>| at each one.</p>
+      <p>Near \(T_c\), aligned regions of every size appear. A single-spin algorithm has to wear them down one spin at a time, so its autocorrelation time grows steeply. For Metropolis at \(T_c\) it grows roughly like \(L^{2.2}\). Wolff flips whole regions at once and barely slows down. This scan sweeps through temperatures and measures \(\langle |m| \rangle\), \(\langle e \rangle\) and \(\tau_{\text{int}}\) of \(|m|\) at each one.</p>
     </div>
 
     <div class="lab">
@@ -169,29 +170,29 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       </aside>
       <div class="viz">
         <ul class="legend" id="sc-legend"></ul>
-        <div class="grid-2">
+        <div class="row-3">
           <figure class="chart">
             <figcaption>
-              <span class="chart-title">Magnetization ⟨|<var>m</var>|⟩</span>
-              <span class="chart-sub">Error bars are σ √(τ<sub>int</sub>/<var>N</var>).</span>
+              <span class="chart-title">Magnetization \(\langle |m| \rangle\)</span>
+              <span class="chart-sub">Error bars are \(\sigma\sqrt{\tau_{\text{int}}/N}\).</span>
             </figcaption>
             <div id="sc-m"></div>
           </figure>
           <figure class="chart">
             <figcaption>
-              <span class="chart-title">Energy per spin ⟨<var>e</var>⟩</span>
-              <span class="chart-sub">It has a kink at <var>T</var><sub>c</sub>, and the specific heat diverges there.</span>
+              <span class="chart-title">Energy per spin \(\langle e \rangle\)</span>
+              <span class="chart-sub">It has a kink at \(T_c\), and the specific heat diverges there.</span>
             </figcaption>
             <div id="sc-e"></div>
           </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Autocorrelation time \(\tau_{\text{int}}\) of \(|m|\), in sweeps</span>
+              <span class="chart-sub">Log scale. Hollow markers mean the window never converged, so the value is a lower bound.</span>
+            </figcaption>
+            <div id="sc-tau"></div>
+          </figure>
         </div>
-        <figure class="chart">
-          <figcaption>
-            <span class="chart-title">Autocorrelation time τ<sub>int</sub> of |<var>m</var>|, in sweeps</span>
-            <span class="chart-sub">Log scale. Hollow markers mean the window never converged, so the value is a lower bound.</span>
-          </figcaption>
-          <div id="sc-tau"></div>
-        </figure>
       </div>
     </div>
 
@@ -199,16 +200,16 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <div class="note">
         <h3>Try this</h3>
         <ol>
-          <li>Run the scan with Metropolis, then with Wolff. Compare the τ<sub>int</sub> peaks at <var>T</var><sub>c</sub>.</li>
-          <li>Rerun Metropolis with <var>L</var> = 48. The peak grows. With <var>L</var> = 16 it shrinks. That size dependence is critical slowing down.</li>
-          <li>Look at ⟨|<var>m</var>|⟩ above <var>T</var><sub>c</sub>. On a finite lattice it doesn't reach zero, because |<var>m</var>| of pure noise is about 1/<var>L</var>. The gray Onsager curve is for an infinite lattice.</li>
+          <li>Run the scan with Metropolis, then with Wolff. Compare the \(\tau_{\text{int}}\) peaks at \(T_c\).</li>
+          <li>Rerun Metropolis with \(L = 48\). The peak grows. With \(L = 16\) it shrinks. That size dependence is critical slowing down.</li>
+          <li>Look at \(\langle |m| \rangle\) above \(T_c\). On a finite lattice it doesn't reach zero, because \(|m|\) of pure noise is about \(1/L\). The gray Onsager curve is for an infinite lattice.</li>
         </ol>
       </div>
       <div class="note">
-        <h3>Reading the τ<sub>int</sub> chart fairly</h3>
-        <p>All three algorithms are measured in sweeps of equal work: <var>N</var> single-spin updates, or a fixed number of Wolff clusters that flip <var>N</var> spins on average. Without that, Wolff would look better or worse just from how its "step" is defined.</p>
-        <p>Why a <em>fixed</em> number of clusters? Stopping as soon as <var>N</var> spins have flipped sounds equivalent, but it biases the measurements. The cluster that crosses the line tends to be a large one (the inspection paradox), and large clusters go with particular states of the lattice. The <a href="tests.html">sampler checks</a> include a test that catches this.</p>
-        <p>At low <var>T</var>, heat bath and Metropolis look fast only because |<var>m</var>| barely moves. The slow mode there, flipping the whole lattice from up to down, never appears in |<var>m</var>|.</p>
+        <h3>Reading the \(\tau_{\text{int}}\) chart fairly</h3>
+        <p>All three algorithms are measured in sweeps of equal work: \(N\) single-spin updates, or a fixed number of Wolff clusters that flip \(N\) spins on average. Without that, Wolff would look better or worse just from how its "step" is defined.</p>
+        <p>Why a <em>fixed</em> number of clusters? Stopping as soon as \(N\) spins have flipped sounds equivalent, but it biases the measurements. The cluster that crosses the line tends to be a large one (the inspection paradox), and large clusters go with particular states of the lattice. The <a href="tests.html">sampler checks</a> include a test that catches this.</p>
+        <p>At low \(T\), heat bath and Metropolis look fast only because \(|m|\) barely moves. The slow mode there, flipping the whole lattice from up to down, never appears in \(|m|\).</p>
       </div>
     </div>
   </section>

@@ -46,9 +46,9 @@ const fctx = fieldCanvas.getContext('2d');
 let fieldImg = null;
 
 legend('gl-field-legend', [
-  { label: 'θ_P < 0', color: 'var(--div-neg)', kind: 'rect' },
-  { label: 'θ_P ≈ 0', color: 'var(--div-mid)', kind: 'rect' },
-  { label: 'θ_P > 0', color: 'var(--div-pos)', kind: 'rect' },
+  { label: '\\(\\theta_P < 0\\)', color: 'var(--div-neg)', kind: 'rect' },
+  { label: '\\(\\theta_P \\approx 0\\)', color: 'var(--div-mid)', kind: 'rect' },
+  { label: '\\(\\theta_P > 0\\)', color: 'var(--div-pos)', kind: 'rect' },
 ]);
 
 function drawField() {
@@ -75,7 +75,7 @@ function segmentBounds(k) {
 }
 
 const plaqPlot = new Plot('gl-plaq', {
-  height: 190,
+  height: 150,
   x: { domain: [0, 50], label: 'sweep' },
   y: { domain: [-0.05, 1.02] },
   draw(p) {
@@ -151,7 +151,7 @@ const wilsonPlot = new Plot('gl-wilson', {
   },
 });
 legend('gl-wilson-legend', [
-  { label: 'measured −ln⟨W⟩', color: 'var(--s1)', kind: 'dot' },
+  { label: 'measured \\(-\\ln\\langle W \\rangle\\)', color: 'var(--s1)', kind: 'dot' },
   { label: 'exact on this lattice', color: 'var(--exact)', kind: 'line' },
 ]);
 

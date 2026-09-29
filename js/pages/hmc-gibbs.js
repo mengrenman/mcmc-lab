@@ -144,9 +144,9 @@ const energy = new Plot('hx-energy', {
   },
 });
 legend('hx-energy-legend', [
-  { label: 'total H = U + K', color: 'var(--s1)', kind: 'line' },
-  { label: 'potential U', color: 'var(--s2)', kind: 'line' },
-  { label: 'kinetic K', color: 'var(--s3)', kind: 'line' },
+  { label: 'total \\(H = U + K\\)', color: 'var(--s1)', kind: 'line' },
+  { label: 'potential \\(U\\)', color: 'var(--s2)', kind: 'line' },
+  { label: 'kinetic \\(K\\)', color: 'var(--s3)', kind: 'line' },
 ]);
 
 function fitEnergyAxes() {
@@ -350,7 +350,7 @@ const [mhLane, gibbsLane, hmcLane] = lanes;
 legend('rc-legend', [
   { label: 'samples', color: 'var(--s1)', kind: 'dot' },
   { label: 'most recent moves', color: 'var(--s2)', kind: 'line' },
-  { label: 'x = 0 (true mean)', color: 'var(--exact)', kind: 'line' },
+  { label: '\\(x = 0\\) (true mean)', color: 'var(--exact)', kind: 'line' },
 ]);
 
 function costPerIteration(lane) {

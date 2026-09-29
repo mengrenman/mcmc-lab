@@ -75,7 +75,7 @@ const land = new Plot('sa-land', {
   },
 });
 legend('sa-land-legend', [
-  { label: 'f(x)', color: 'var(--exact)', kind: 'line' },
+  { label: '\\(f(x)\\)', color: 'var(--exact)', kind: 'line' },
   { label: 'walkers', color: 'var(--s1)', kind: 'dot' },
 ]);
 
@@ -104,7 +104,7 @@ const fracPlot = new Plot('sa-frac', {
   },
 });
 legend('sa-frac-legend', [
-  { label: 'walkers with x > 0', color: 'var(--s1)', kind: 'line' },
+  { label: 'walkers with \\(x > 0\\)', color: 'var(--s1)', kind: 'line' },
   { label: 'exact equilibrium at this T', color: 'var(--exact)', kind: 'line' },
 ]);
 
@@ -272,7 +272,7 @@ const rxHistPlot = new Plot('rx-hist', {
 });
 legend('rx-hist-legend', [
   { label: 'samples on the measured rung', color: 'var(--s1)', kind: 'rect' },
-  { label: 'exact e^(−f/T), bin-averaged', color: 'var(--exact)', kind: 'line' },
+  { label: 'exact \\(e^{-f/T}\\), bin-averaged', color: 'var(--exact)', kind: 'line' },
 ]);
 
 const rxFrac = new Plot('rx-frac', {

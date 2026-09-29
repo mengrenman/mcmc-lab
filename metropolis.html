@@ -7,6 +7,9 @@
 <meta name="description" content="Watch a Metropolis chain propose, accept and reject moves, then read its trace, histogram, autocorrelation and jackknife error bars.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 <script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
 <script type="module" src="js/pages/metropolis.js"></script>
@@ -22,9 +25,9 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="lesson" id="lab">
     <h2>One proposal at a time</h2>
     <div class="idea">
-      <p>From the current point <var>x</var>, propose <var>x</var>′ = <var>x</var> + Δ<var>x</var>, with Δ<var>x</var> drawn uniformly from [−<var>c</var>, <var>c</var>]. Then accept the move with probability</p>
-      <span class="formula">P<sub>accept</sub> = min(1, <var>p</var>(<var>x</var>′) / <var>p</var>(<var>x</var>))</span>
-      <p>Uphill moves are always taken. Downhill moves are taken only sometimes. If the move is rejected, the chain stays at <var>x</var> <strong>and records <var>x</var> again</strong>. Only the ratio of probabilities matters, so <var>p</var> never has to be normalized.</p>
+      <p>From the current point \(x\), propose \(x' = x + \Delta x\), with \(\Delta x\) drawn uniformly from \([-c, c]\). Then accept the move with probability</p>
+      <span class="formula">\[P_{\text{accept}} = \min\!\left(1,\ \frac{p(x')}{p(x)}\right)\]</span>
+      <p>Uphill moves are always taken. Downhill moves are taken only sometimes. If the move is rejected, the chain stays at \(x\) <strong>and records \(x\) again</strong>. Only the ratio of probabilities matters, so \(p\) never has to be normalized.</p>
     </div>
 
     <div class="lab">
@@ -43,11 +46,11 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           </select>
         </label>
         <label class="field">
-          <span class="field-head"><span>Step size <var>c</var></span><output for="mh-step"></output></span>
+          <span class="field-head"><span>Step size \(c\)</span><output for="mh-step"></output></span>
           <input type="range" id="mh-step" min="-1.3" max="1.7" step="0.01" value="0">
         </label>
         <label class="field">
-          <span class="field-head"><span>Starting point <var>x</var><sub>0</sub></span><output for="mh-start"></output></span>
+          <span class="field-head"><span>Starting point \(x_0\)</span><output for="mh-start"></output></span>
           <input type="range" id="mh-start" min="-15" max="15" step="0.1" value="0">
         </label>
         <label class="field">
@@ -64,34 +67,32 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
 
       <div class="viz">
         <p class="decision" id="mh-decision" aria-live="polite"></p>
-
-        <figure class="chart">
-          <figcaption>
-            <span class="chart-title">Target density and the latest proposal</span>
-            <span class="chart-sub">The shaded window is where the next proposal can land. At slow speeds you can follow each decision.</span>
-          </figcaption>
-          <ul class="legend" id="mh-density-legend"></ul>
-          <div id="mh-density"></div>
-        </figure>
-
         <div class="tiles cols-3">
           <div class="tile"><span class="tile-label">Steps</span><span class="tile-value" id="mh-t-steps">0</span><span class="tile-sub" id="mh-t-seed"></span></div>
           <div class="tile"><span class="tile-label">Acceptance rate</span><span class="tile-value" id="mh-t-acc">—</span><span class="tile-sub">accepted ÷ proposed</span></div>
           <div class="tile"><span class="tile-label">Mean ± error</span><span class="tile-value" id="mh-t-mean">—</span><span class="tile-sub" id="mh-t-mean-exact"></span></div>
           <div class="tile"><span class="tile-label">Variance</span><span class="tile-value" id="mh-t-var">—</span><span class="tile-sub" id="mh-t-var-exact"></span></div>
-          <div class="tile"><span class="tile-label">Autocorrelation time τ<sub>int</sub></span><span class="tile-value" id="mh-t-tau">—</span><span class="tile-sub" id="mh-t-window"></span></div>
+          <div class="tile"><span class="tile-label">Autocorrelation time \(\tau_{\text{int}}\)</span><span class="tile-value" id="mh-t-tau">—</span><span class="tile-sub" id="mh-t-window"></span></div>
           <div class="tile"><span class="tile-label">Effective samples</span><span class="tile-value" id="mh-t-ess">—</span><span class="tile-sub" id="mh-t-kept"></span></div>
         </div>
-
-        <figure class="chart">
-          <figcaption>
-            <span class="chart-title">Trace: <var>x</var> after every step</span>
-            <span class="chart-sub">The shaded region is the burn-in, which is thrown away. Flat stretches are runs of rejections.</span>
-          </figcaption>
-          <div id="mh-trace"></div>
-        </figure>
-
-        <div class="grid-2">
+        <div class="row-2">
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Target density and the latest proposal</span>
+              <span class="chart-sub">The shaded window is where the next proposal can land. At slow speeds you can follow each decision.</span>
+            </figcaption>
+            <ul class="legend" id="mh-density-legend"></ul>
+            <div id="mh-density"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Trace: \(x\) after every step</span>
+              <span class="chart-sub">The shaded region is the burn-in, which is thrown away. Flat stretches are runs of rejections.</span>
+            </figcaption>
+            <div id="mh-trace"></div>
+          </figure>
+        </div>
+        <div class="row-3">
           <figure class="chart">
             <figcaption>
               <span class="chart-title">Histogram of kept samples</span>
@@ -102,21 +103,20 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           </figure>
           <figure class="chart">
             <figcaption>
-              <span class="chart-title">Autocorrelation ρ(<var>t</var>)</span>
-              <span class="chart-sub">Correlation between samples <var>t</var> steps apart. The vertical line marks the summation window.</span>
+              <span class="chart-title">Autocorrelation \(\rho(t)\)</span>
+              <span class="chart-sub">Correlation between samples \(t\) steps apart. The vertical line marks the summation window.</span>
             </figcaption>
             <div id="mh-acf"></div>
           </figure>
+          <figure class="chart">
+            <figcaption>
+              <span class="chart-title">Jackknife error of the mean versus bin size</span>
+              <span class="chart-sub">Grouping samples into ever larger bins removes the correlation. The honest error bar is where the curve levels off.</span>
+            </figcaption>
+            <ul class="legend" id="mh-jack-legend"></ul>
+            <div id="mh-jack"></div>
+          </figure>
         </div>
-
-        <figure class="chart">
-          <figcaption>
-            <span class="chart-title">Jackknife error of the mean versus bin size</span>
-            <span class="chart-sub">Grouping samples into ever larger bins removes the correlation. The honest error bar is where the curve levels off.</span>
-          </figcaption>
-          <ul class="legend" id="mh-jack-legend"></ul>
-          <div id="mh-jack"></div>
-        </figure>
       </div>
     </div>
 
@@ -125,17 +125,17 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
         <h3>Try this</h3>
         <ol>
           <li>Press <b>Step</b> a few times and read each decision. Then set the speed to about 50 per second and press <b>Run</b>.</li>
-          <li>Drag the step size to 0.1. Almost every proposal is accepted, yet the trace creeps along and τ<sub>int</sub> grows large.</li>
+          <li>Drag the step size to 0.1. Almost every proposal is accepted, yet the trace creeps along and \(\tau_{\text{int}}\) grows large.</li>
           <li>Drag it to 30. Now almost everything is rejected, and the trace turns into long flat steps.</li>
-          <li>Find the step size that makes τ<sub>int</sub> smallest. It's larger than most people guess.</li>
-          <li>Set <var>x</var><sub>0</sub> = 12 and watch the trace fall toward the typical region. Raise the burn-in until the shaded region covers that approach.</li>
-          <li>Choose <b>Two separated modes</b> with <var>c</var> = 1. The chain gets stuck in one bump, and the histogram looks confidently wrong. Try <var>c</var> = 6.</li>
+          <li>Find the step size that makes \(\tau_{\text{int}}\) smallest. It's larger than most people guess.</li>
+          <li>Set \(x_0 = 12\) and watch the trace fall toward the typical region. Raise the burn-in until the shaded region covers that approach.</li>
+          <li>Choose <b>Two separated modes</b> with \(c = 1\). The chain gets stuck in one bump, and the histogram looks confidently wrong. Try \(c = 6\).</li>
         </ol>
       </div>
       <div class="note">
         <h3>What a good step size looks like</h3>
-        <p>A step that is too small wastes time on tiny moves. A step that is too large wastes time on rejections. Between the two, the autocorrelation time τ<sub>int</sub> reaches a minimum. For the N(0, 1) target that happens around <var>c</var> ≈ 3.5, where roughly 44% of proposals are accepted and τ<sub>int</sub> ≈ 3.7. At <var>c</var> = 1 the acceptance rate is 80% but τ<sub>int</sub> ≈ 16. Target acceptance rates are only rules of thumb. The number to minimize is τ<sub>int</sub>.</p>
-        <p>With the Gamma target, any proposal with <var>x</var>′ ≤ 0 has <var>p</var>(<var>x</var>′) = 0 and is always rejected. Boundaries need no special handling.</p>
+        <p>A step that is too small wastes time on tiny moves. A step that is too large wastes time on rejections. Between the two, the autocorrelation time \(\tau_{\text{int}}\) reaches a minimum. For the \(\mathcal{N}(0, 1)\) target that happens around \(c \approx 3.5\), where roughly 44% of proposals are accepted and \(\tau_{\text{int}} \approx 3.7\). At \(c = 1\) the acceptance rate is 80% but \(\tau_{\text{int}} \approx 16\). Target acceptance rates are only rules of thumb. The number to minimize is \(\tau_{\text{int}}\).</p>
+        <p>With the Gamma target, any proposal with \(x' \le 0\) has \(p(x') = 0\) and is always rejected. Boundaries need no special handling.</p>
       </div>
     </div>
   </section>
@@ -143,7 +143,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="lesson">
     <h2>Reading the diagnostics</h2>
     <div class="prose">
-      <p>Consecutive samples of a Markov chain are correlated, since each one starts from the one before. That changes how much information <var>N</var> samples carry.</p>
+      <p>Consecutive samples of a Markov chain are correlated, since each one starts from the one before. That changes how much information \(N\) samples carry.</p>
     </div>
     <div class="notes">
       <div class="note">
@@ -152,18 +152,18 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       </div>
       <div class="note">
         <h3>Integrated autocorrelation time</h3>
-        <p>τ<sub>int</sub> = 1 + 2 Σ<sub><var>t</var>≥1</sub> ρ(<var>t</var>) is roughly the number of steps per independent sample. The sum is cut off at a window <var>W</var> where the remaining terms are mostly noise. Here <var>W</var> is the first lag with <var>W</var> ≥ 5 τ<sub>int</sub>.</p>
-        <p>The effective sample size is <var>N</var> / τ<sub>int</sub>. The error on the mean is σ √(τ<sub>int</sub> / <var>N</var>), not the naive σ / √<var>N</var>.</p>
+        <p>\(\tau_{\text{int}} = 1 + 2\sum_{t \ge 1} \rho(t)\) is roughly the number of steps per independent sample. The sum is cut off at a window \(W\) where the remaining terms are mostly noise. Here \(W\) is the first lag with \(W \ge 5\,\tau_{\text{int}}\).</p>
+        <p>The effective sample size is \(N/\tau_{\text{int}}\). The error on the mean is \(\sigma\sqrt{\tau_{\text{int}}/N}\), not the naive \(\sigma/\sqrt{N}\).</p>
       </div>
       <div class="note">
         <h3>Jackknife with binning</h3>
-        <p>Split the <var>N</var> kept samples into bins of size <var>w</var>. Each bin average is much less correlated with its neighbors once <var>w</var> ≫ τ<sub>int</sub>. Then recompute the mean with one bin left out at a time. The spread of these leave-one-out means gives the error.</p>
-        <p>At <var>w</var> = 1 you get the naive error. The curve rises and levels off at the honest error, a check that does not depend on how the ACF sum was cut off.</p>
+        <p>Split the \(N\) kept samples into bins of size \(w\). Each bin average is much less correlated with its neighbors once \(w \gg \tau_{\text{int}}\). Then recompute the mean with one bin left out at a time. The spread of these leave-one-out means gives the error.</p>
+        <p>At \(w = 1\) you get the naive error. The curve rises and levels off at the honest error, a check that does not depend on how the ACF sum was cut off.</p>
       </div>
       <div class="note">
         <h3>Common mistakes (book §4.7)</h3>
         <ul>
-          <li><b>Tuning the step size mid-run based on the chain's own history.</b> Tune in a trial run, then fix <var>c</var> and start a fresh chain. That's why this lab restarts when you move the slider.</li>
+          <li><b>Tuning the step size mid-run based on the chain's own history.</b> Tune in a trial run, then fix \(c\) and start a fresh chain. That's why this lab restarts when you move the slider.</li>
           <li><b>Pooling samples from runs with different settings</b> and treating them as a single chain.</li>
           <li><b>Poor random numbers.</b> This app uses a seeded xoshiro128** generator, so any run can be reproduced exactly.</li>
         </ul>

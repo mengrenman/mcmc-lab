@@ -66,9 +66,9 @@ const curves = new Plot('co-curves', {
   },
 });
 legend('co-curves-legend', [
-  { label: 'prior P(p)', color: 'var(--s2)', kind: 'line' },
-  { label: 'likelihood P(data | p)', color: 'var(--s3)', kind: 'line' },
-  { label: 'posterior P(p | data)', color: 'var(--exact)', kind: 'line' },
+  { label: 'prior \\(P(p)\\)', color: 'var(--s2)', kind: 'line' },
+  { label: 'likelihood \\(P(\\text{data} \\mid p)\\)', color: 'var(--s3)', kind: 'line' },
+  { label: 'posterior \\(P(p \\mid \\text{data})\\)', color: 'var(--exact)', kind: 'line' },
 ]);
 
 const historyPlot = new Plot('co-history', {
@@ -112,7 +112,7 @@ const historyPlot = new Plot('co-history', {
 });
 legend('co-history-legend', [
   { label: 'posterior mean and 95% interval', color: 'var(--exact)', kind: 'line' },
-  { label: 'maximum likelihood k/n', color: 'var(--s3)', kind: 'line' },
+  { label: 'maximum likelihood \\(k/n\\)', color: 'var(--s3)', kind: 'line' },
 ]);
 
 function summaryAt(n) {
@@ -460,7 +460,7 @@ const dataPlot = new Plot('gs-data', {
 legend('gs-data-legend', [
   { label: 'data', color: 'var(--s1)', kind: 'rect' },
   { label: 'true density', color: 'var(--exact)', kind: 'line' },
-  { label: 'max-likelihood fit N(x̄, s²)', color: 'var(--s2)', kind: 'line' },
+  { label: 'max-likelihood fit \\(\\mathcal{N}(\\bar{x}, s^2)\\)', color: 'var(--s2)', kind: 'line' },
 ]);
 
 const heatmaps = new Map();
@@ -500,15 +500,15 @@ const plane = new Plot('gs-plane', {
 });
 legend('gs-plane-legend', [
   { label: 'samples', color: 'var(--s1)', kind: 'dot' },
-  { label: 'max likelihood (x̄, s)', color: 'var(--s2)', kind: 'dot' },
-  { label: 'true (μ, σ)', color: 'var(--exact)', kind: 'dot' },
+  { label: 'maximum likelihood \\((\\bar{x}, s)\\)', color: 'var(--s2)', kind: 'dot' },
+  { label: 'true \\((\\mu, \\sigma)\\)', color: 'var(--exact)', kind: 'dot' },
 ]);
 
 function marginalPlot(id, { trace, pdf, dom, label }) {
   const BINS = 40;
   let hist = null;
   const plot = new Plot(id, {
-    height: 200,
+    height: 170,
     x: { domain: [0, 1], label },
     draw(p) {
       if (!gs) return;

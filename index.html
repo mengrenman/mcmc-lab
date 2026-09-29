@@ -7,6 +7,9 @@
 <meta name="description" content="Learn Markov chain Monte Carlo interactively: Monte Carlo integration, Metropolis, HMC, Gibbs sampling and the Ising model, all written from scratch.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 <script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
 <script type="module">
@@ -32,8 +35,8 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       </svg>
       <span class="num">Module 1 · Chapter 2</span>
       <h2>Monte Carlo integration</h2>
-      <p>Estimate π with random darts, watch the error shrink like 1/√N, and see how importance sampling beats uniform sampling.</p>
-      <div class="tags"><span>1/√N error</span><span>importance sampling</span><span>infinite variance</span></div>
+      <p>Estimate \(\pi\) with random darts, watch the error shrink like \(1/\sqrt{N}\), and see how importance sampling beats uniform sampling.</p>
+      <div class="tags"><span>\(1/\sqrt{N}\) error</span><span>importance sampling</span><span>infinite variance</span></div>
     </a>
     <a class="card" href="metropolis.html">
       <svg viewBox="0 0 200 88" aria-hidden="true">
@@ -59,7 +62,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <span class="num">Module 3 · Chapter 5</span>
       <h2>HMC and Gibbs sampling</h2>
       <p>Follow leapfrog trajectories and energy conservation, then race Metropolis, Gibbs and HMC on a strongly correlated target.</p>
-      <div class="tags"><span>leapfrog</span><span>ΔH</span><span>conditionals</span><span>ESS per cost</span></div>
+      <div class="tags"><span>leapfrog</span><span>\(\Delta H\)</span><span>conditionals</span><span>ESS per cost</span></div>
     </a>
     <a class="card" href="bayes.html">
       <svg viewBox="0 0 200 88" aria-hidden="true">
@@ -78,7 +81,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       </svg>
       <span class="num">Module 5 · §6.2</span>
       <h2>The Ising model</h2>
-      <p>Watch a magnet order itself below T<sub>c</sub>, compare single-spin and Wolff cluster updates, and measure critical slowing down.</p>
+      <p>Watch a magnet order itself below \(T_c\), compare single-spin and Wolff cluster updates, and measure critical slowing down.</p>
       <div class="tags"><span>phase transition</span><span>heat bath</span><span>Wolff clusters</span></div>
     </a>
     <a class="card" href="optimization.html">

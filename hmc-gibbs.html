@@ -7,6 +7,9 @@
 <meta name="description" content="Follow Hamiltonian Monte Carlo trajectories and energy conservation, then race Metropolis, Gibbs and HMC on a correlated target.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 <script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
 <script type="module" src="js/pages/hmc-gibbs.js"></script>
@@ -22,8 +25,8 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="lesson" id="hx-lab">
     <h2>Hamiltonian Monte Carlo, one trajectory at a time</h2>
     <div class="idea">
-      <p>Treat <var>U</var>(<var>x</var>) = −log <var>p</var>(<var>x</var>) as a landscape and the current sample as a particle on it. Give the particle a random momentum <var>p</var> ~ N(0, 1), let it slide for <var>L</var> leapfrog steps of size ε, and propose the point where it stops. Along the true motion the energy <var>H</var> = <var>U</var>(<var>x</var>) + ½|<var>p</var>|² would stay constant. The leapfrog integrator keeps it only approximately constant, so the endpoint is accepted with probability</p>
-      <span class="formula">P<sub>accept</sub> = min(1, e<sup>−Δ<var>H</var></sup>)</span>
+      <p>Treat \(U(x) = -\log p(x)\) as a landscape and the current sample as a particle on it. Give the particle a random momentum \(p \sim \mathcal{N}(0, 1)\), let it slide for \(L\) leapfrog steps of size \(\varepsilon\), and propose the point where it stops. Along the true motion the energy \(H = U(x) + \tfrac{1}{2}|p|^2\) would stay constant. The leapfrog integrator keeps it only approximately constant, so the endpoint is accepted with probability</p>
+      <span class="formula">\[P_{\text{accept}} = \min\!\left(1,\ e^{-\Delta H}\right)\]</span>
       <p>Leapfrog is time-reversible and preserves phase-space volume. Those two properties are what make this simple rule satisfy detailed balance (book §5.1.3).</p>
     </div>
 
@@ -42,30 +45,30 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           </select>
         </label>
         <label class="field" id="hx-rho-field">
-          <span class="field-head"><span>Correlation ρ</span><output for="hx-rho"></output></span>
+          <span class="field-head"><span>Correlation \(\rho\)</span><output for="hx-rho"></output></span>
           <input type="range" id="hx-rho" min="0" max="0.99" step="0.01" value="0.9">
         </label>
         <label class="field">
-          <span class="field-head"><span>Step size ε</span><output for="hx-eps"></output></span>
+          <span class="field-head"><span>Step size \(\varepsilon\)</span><output for="hx-eps"></output></span>
           <input type="range" id="hx-eps" min="-2" max="0.3" step="0.01" value="-0.82">
         </label>
         <label class="field">
-          <span class="field-head"><span>Leapfrog steps <var>L</var></span><output for="hx-L"></output></span>
+          <span class="field-head"><span>Leapfrog steps \(L\)</span><output for="hx-L"></output></span>
           <input type="range" id="hx-L" min="1" max="100" step="1" value="20">
         </label>
         <label class="field">
           <span class="field-head"><span>Speed</span><output for="hx-speed"></output></span>
           <input type="range" id="hx-speed" min="-0.3" max="2.5" step="0.01" value="0.3">
         </label>
-        <p class="hint">Up to 5 steps per second, each trajectory is drawn as it unfolds. Changing ε or <var>L</var> keeps the chain but changes how the next trajectories are integrated.</p>
+        <p class="hint">Up to 5 steps per second, each trajectory is drawn as it unfolds. Changing \(\varepsilon\) or \(L\) keeps the chain but changes how the next trajectories are integrated.</p>
       </aside>
       <div class="viz">
         <p class="decision" id="hx-decision" aria-live="polite"></p>
         <div class="tiles cols-4">
           <div class="tile"><span class="tile-label">HMC steps</span><span class="tile-value" id="hx-steps">0</span></div>
           <div class="tile"><span class="tile-label">Acceptance rate</span><span class="tile-value" id="hx-acc">—</span></div>
-          <div class="tile"><span class="tile-label">Last energy error Δ<var>H</var></span><span class="tile-value" id="hx-dh">—</span></div>
-          <div class="tile"><span class="tile-label">Gradient evaluations</span><span class="tile-value" id="hx-grads">0</span><span class="tile-sub"><var>L</var> + 1 per step</span></div>
+          <div class="tile"><span class="tile-label">Last energy error \(\Delta H\)</span><span class="tile-value" id="hx-dh">—</span></div>
+          <div class="tile"><span class="tile-label">Gradient evaluations</span><span class="tile-value" id="hx-grads">0</span><span class="tile-sub">\(L + 1\) per step</span></div>
         </div>
         <div class="grid-2">
           <figure class="chart">
@@ -79,7 +82,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           <figure class="chart">
             <figcaption>
               <span class="chart-title">Energy along the trajectory</span>
-              <span class="chart-sub">Potential and kinetic energy trade off. Their sum <var>H</var> should stay nearly flat.</span>
+              <span class="chart-sub">Potential and kinetic energy trade off. Their sum \(H\) should stay nearly flat.</span>
             </figcaption>
             <ul class="legend" id="hx-energy-legend"></ul>
             <div id="hx-energy"></div>
@@ -93,14 +96,14 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
         <h3>Try this</h3>
         <ol>
           <li>Press <b>One step</b> several times. Each trajectory curves along the ridge of the density rather than stumbling across it.</li>
-          <li>With ρ = 0.9, raise ε slowly. Past ε ≈ 0.63 the leapfrog integration becomes unstable, <var>H</var> explodes, and every proposal is rejected.</li>
-          <li>Set <var>L</var> = 1. HMC becomes a small, gradient-guided random walk (Langevin dynamics). Then try <var>L</var> = 100 and watch trajectories loop back on themselves, which wastes work.</li>
+          <li>With \(\rho = 0.9\), raise \(\varepsilon\) slowly. Past \(\varepsilon \approx 0.63\) the leapfrog integration becomes unstable, \(H\) explodes, and every proposal is rejected.</li>
+          <li>Set \(L = 1\). HMC becomes a small, gradient-guided random walk (Langevin dynamics). Then try \(L = 100\) and watch trajectories loop back on themselves, which wastes work.</li>
           <li>Switch to the banana. A step size that is fine in the wide part of the ridge fails in the narrow, curved arms.</li>
         </ol>
       </div>
       <div class="note">
         <h3>Where the 0.63 comes from</h3>
-        <p>For a Gaussian, the steepest direction behaves like a spring with frequency ω = 1/√(1 − ρ). Leapfrog tracks a spring only if εω &lt; 2, which gives ε &lt; 2√(1 − ρ) ≈ 0.63 at ρ = 0.9. The stiffest direction limits the step size. The long, flat direction then needs many steps to cross, and that is the price HMC pays for strong correlations.</p>
+        <p>For a Gaussian, the steepest direction behaves like a spring with frequency \(\omega = 1/\sqrt{1-\rho}\). Leapfrog tracks a spring only if \(\varepsilon\omega &lt; 2\), which gives \(\varepsilon &lt; 2\sqrt{1-\rho} \approx 0.63\) at \(\rho = 0.9\). The stiffest direction limits the step size. The long, flat direction then needs many steps to cross, and that is the price HMC pays for strong correlations.</p>
       </div>
     </div>
   </section>
@@ -108,7 +111,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="lesson" id="rc-lab">
     <h2>A race: Metropolis vs Gibbs vs HMC</h2>
     <div class="idea">
-      <p>Three chains start at the same end of the target's ridge and run the same number of iterations. To mix, each has to travel the length of the ridge and back. The effective sample size (ESS) of <var>x</var> measures how much independent information each chain has collected. One iteration costs very different amounts of work in each column, so ESS is also reported per unit of work.</p>
+      <p>Three chains start at the same end of the target's ridge and run the same number of iterations. To mix, each has to travel the length of the ridge and back. The effective sample size (ESS) of \(x\) measures how much independent information each chain has collected. One iteration costs very different amounts of work in each column, so ESS is also reported per unit of work.</p>
     </div>
 
     <div class="lab">
@@ -125,19 +128,19 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
           </select>
         </label>
         <label class="field" id="rc-rho-field">
-          <span class="field-head"><span>Correlation ρ</span><output for="rc-rho"></output></span>
+          <span class="field-head"><span>Correlation \(\rho\)</span><output for="rc-rho"></output></span>
           <input type="range" id="rc-rho" min="0" max="0.99" step="0.01" value="0.95">
         </label>
         <label class="field">
-          <span class="field-head"><span>Metropolis step <var>c</var></span><output for="rc-c"></output></span>
+          <span class="field-head"><span>Metropolis step \(c\)</span><output for="rc-c"></output></span>
           <input type="range" id="rc-c" min="-1.3" max="0.5" step="0.01" value="-0.52">
         </label>
         <label class="field">
-          <span class="field-head"><span>HMC step size ε</span><output for="rc-eps"></output></span>
+          <span class="field-head"><span>HMC step size \(\varepsilon\)</span><output for="rc-eps"></output></span>
           <input type="range" id="rc-eps" min="-2" max="0" step="0.01" value="-0.7">
         </label>
         <label class="field">
-          <span class="field-head"><span>HMC leapfrog steps <var>L</var></span><output for="rc-L"></output></span>
+          <span class="field-head"><span>HMC leapfrog steps \(L\)</span><output for="rc-L"></output></span>
           <input type="range" id="rc-L" min="1" max="60" step="1" value="15">
         </label>
         <label class="field">
@@ -183,17 +186,17 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
       <div class="note">
         <h3>What to notice</h3>
         <ul>
-          <li><b>Gibbs</b> moves only parallel to the axes, taking steps about √(1 − ρ²) long. At ρ = 0.95 that is 0.31, so it zigzags slowly along the diagonal even though every draw is accepted.</li>
-          <li><b>Metropolis</b> needs <var>c</var> small enough for the narrow direction, which leaves it a slow random walk along the long one.</li>
-          <li><b>HMC</b> covers the diagonal in one trajectory. Each of those iterations costs <var>L</var> + 1 gradient evaluations, so compare the "per 1,000 evaluations" rows too.</li>
+          <li><b>Gibbs</b> moves only parallel to the axes, taking steps about \(\sqrt{1-\rho^2}\) long. At \(\rho = 0.95\) that is 0.31, so it zigzags slowly along the diagonal even though every draw is accepted.</li>
+          <li><b>Metropolis</b> needs \(c\) small enough for the narrow direction, which leaves it a slow random walk along the long one.</li>
+          <li><b>HMC</b> covers the diagonal in one trajectory. Each of those iterations costs \(L + 1\) gradient evaluations, so compare the "per 1,000 evaluations" rows too.</li>
         </ul>
       </div>
       <div class="note">
         <h3>Try this</h3>
         <ol>
-          <li>Set ρ = 0 and run. All three do well. Gibbs is now perfect, since each draw is independent.</li>
-          <li>Push ρ to 0.99 and compare how ESS per 1,000 iterations drops for each sampler.</li>
-          <li>On the banana, tune <var>c</var> and ε by hand. Can Metropolis ever keep up?</li>
+          <li>Set \(\rho = 0\) and run. All three do well. Gibbs is now perfect, since each draw is independent.</li>
+          <li>Push \(\rho\) to 0.99 and compare how ESS per 1,000 iterations drops for each sampler.</li>
+          <li>On the banana, tune \(c\) and \(\varepsilon\) by hand. Can Metropolis ever keep up?</li>
         </ol>
       </div>
     </div>

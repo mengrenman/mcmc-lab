@@ -7,6 +7,9 @@
 <meta name="description" content="Statistical and exact checks of every sampler in MCMC Lab against known answers.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1' fill='none' stroke='%232a78d6' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 <script>try{var t=localStorage.getItem('mcmc-lab-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){var p=document.createElement('p');p.className='file-warning';p.innerHTML='This page was opened as a file, and browsers block the JavaScript modules the labs need. In a terminal, run <code>python3 -m http.server 8000</code> inside the <code>mcmc-lab</code> folder, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.';document.body.prepend(p)});</script>
 <script type="module" src="js/tests.js"></script>
@@ -16,7 +19,7 @@ if(location.protocol==='file:')addEventListener('DOMContentLoaded',function(){va
   <section class="hero">
     <p class="eyebrow">Behind the scenes</p>
     <h1>Sampler checks</h1>
-    <p class="lede">Every sampler in the labs, checked against exact answers. A statistical check passes when the estimate falls within 4 of its own error bars of the exact value, using σ √(τ<sub>int</sub>/<var>N</var>) so the autocorrelation is accounted for. The first run uses fixed seeds, so its results are reproducible.</p>
+    <p class="lede">Every sampler in the labs, checked against exact answers. A statistical check passes when the estimate falls within 4 of its own error bars of the exact value, using \(\sigma\sqrt{\tau_{\text{int}}/N}\) so the autocorrelation is accounted for. The first run uses fixed seeds, so its results are reproducible.</p>
   </section>
   <section class="lesson" style="padding-top: 16px">
     <div class="btn-row" style="align-items:center; margin-bottom: 12px">

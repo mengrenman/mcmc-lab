@@ -27,7 +27,39 @@ const SUN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=
 const MOON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
 const LOGO = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18c3-9 5-12 7-6s4 4 5-2 3-6 6 1" fill="none" stroke="var(--s1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="11" r="2.2" fill="var(--s2)"/></svg>';
 
+/**
+ * Typeset the LaTeX in the page body with KaTeX (vendor/katex, loaded with `defer` before the
+ * page modules). Inline math is written \( … \) and display math \[ … \].
+ */
+function renderMath() {
+  const main = document.querySelector('main');
+  if (!main || typeof window.renderMathInElement !== 'function') return;
+  window.renderMathInElement(main, {
+    delimiters: [
+      { left: '\\[', right: '\\]', display: true },
+      { left: '\\(', right: '\\)', display: false },
+    ],
+    throwOnError: false,
+  });
+  // Keep punctuation right after an expression on the same line (no line starting with ",").
+  for (const k of main.querySelectorAll('.katex')) {
+    if (k.closest('.katex-display')) continue;
+    let box = k; // auto-render wraps each formula in an extra span
+    while (box.parentElement !== main && box.parentElement.childNodes.length === 1) box = box.parentElement;
+    const next = box.nextSibling;
+    if (next && next.nodeType === Node.TEXT_NODE && /^[,.;:)!?]/.test(next.data)) {
+      const m = next.data.match(/^[,.;:)!?]+/)[0];
+      const wrap = document.createElement('span');
+      wrap.className = 'math-nowrap';
+      box.replaceWith(wrap);
+      wrap.append(box, m);
+      next.data = next.data.slice(m.length);
+    }
+  }
+}
+
 export function mountChrome() {
+  renderMath();
   const here = location.pathname.split('/').pop() || 'index.html';
   const header = document.createElement('header');
   header.className = 'site-header';
@@ -113,6 +145,11 @@ export function bindRange(id, { format = String, log = false, onInput } = {}) {
  * requestAnimationFrame loop with play/pause. tick(dt) runs each frame while playing;
  * return false from it to stop. Frames are skipped while the lab is scrolled out of view.
  */
+function autorunRequested(labId) {
+  const v = new URLSearchParams(location.search).get('run');
+  return v === 'all' || (v || '').split(',').includes(labId);
+}
+
 export class Runner {
   constructor({ tick, button, root, onChange }) {
     this.tick = tick;
@@ -129,6 +166,9 @@ export class Runner {
     }
     this.button?.addEventListener('click', () => this.toggle());
     this.paint();
+    // ?run=all or ?run=lab-id,other-id starts labs on load (demo links, README screenshots).
+    const id = typeof root === 'string' ? root : root?.id;
+    if (id && autorunRequested(id)) setTimeout(() => this.start(), 0); // after the page finishes setup
   }
   paint() {
     if (!this.button) return;

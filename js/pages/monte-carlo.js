@@ -83,8 +83,8 @@ const errPlot = new Plot('pi-error', {
   },
 });
 legend('pi-error-legend', [
-  { label: 'this run: |estimate − π|', color: 'var(--s1)', kind: 'line' },
-  { label: 'expected error 1.64/√N', color: 'var(--exact)', kind: 'line' },
+  { label: 'this run: \\(|\\hat{\\pi} - \\pi|\\)', color: 'var(--s1)', kind: 'line' },
+  { label: 'expected error \\(1.64/\\sqrt{N}\\)', color: 'var(--exact)', kind: 'line' },
 ]);
 
 function throwDarts(k) {
@@ -210,9 +210,9 @@ const funcs = new Plot('is-funcs', {
   },
 });
 legend('is-funcs-legend', [
-  { label: 'integrand f(x)', color: 'var(--exact)', kind: 'line' },
+  { label: 'integrand \\(f(x)\\)', color: 'var(--exact)', kind: 'line' },
   { label: 'uniform proposal', color: 'var(--s1)', kind: 'line' },
-  { label: 'Gaussian proposal N(0, s²)', color: 'var(--s2)', kind: 'line' },
+  { label: 'Gaussian proposal \\(\\mathcal{N}(0, s^2)\\)', color: 'var(--s2)', kind: 'line' },
 ]);
 
 const running = new Plot('is-running', {
@@ -242,7 +242,7 @@ const running = new Plot('is-running', {
 legend('is-running-legend', [
   { label: 'uniform sampling', color: 'var(--s1)', kind: 'line' },
   { label: 'importance sampling', color: 'var(--s2)', kind: 'line' },
-  { label: 'exact √(2π)', color: 'var(--exact)', kind: 'line' },
+  { label: 'exact \\(\\sqrt{2\\pi}\\)', color: 'var(--exact)', kind: 'line' },
 ]);
 
 function sampleIS(k) {

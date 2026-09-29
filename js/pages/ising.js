@@ -92,7 +92,7 @@ function historyPlot(id, { history, exact, y, label }) {
 
 const mPlot = historyPlot('ig-m', { history: histM, exact: onsagerMagnetization, y: [0, 1.02], label: '|m|' });
 const ePlot = historyPlot('ig-e', { history: histE, exact: onsagerEnergy, y: [-2.05, 0.05], label: 'e' });
-for (const [id, name] of [['ig-m-legend', '|m| after each sweep'], ['ig-e-legend', 'e after each sweep']]) {
+for (const [id, name] of [['ig-m-legend', '\\(|m|\\) after each sweep'], ['ig-e-legend', '\\(e\\) after each sweep']]) {
   legend(id, [
     { label: name, color: 'var(--s1)', kind: 'line' },
     { label: 'exact (Onsager, infinite lattice)', color: 'var(--exact)', kind: 'line' },
